@@ -85,7 +85,7 @@ import { Webhook } from "svix";
 
 const webhook = new Webhook(process.env.SVIX_WEBHOOK_SECRET);
 
-app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
+app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const event = webhook.verify(req.body, req.headers);
     await processWebhook(event);
@@ -235,6 +235,8 @@ After creation, the system automatically:
 | `amount`      | Transfer amount as a string                           |
 | `agents`      | Chain of agents with roles and `for` relationships    |
 | `ref`         | Idempotency key for deduplication                     |
+
+> **Note on agent roles:** The Notabene API uses simplified role values (`VASP`, `SourceAddress`, `SettlementAddress`) that differ from the underlying TAP protocol roles (`OriginatorVASP`, `BeneficiaryVASP`, etc. — see TAIP-5). The API maps these internally. Always use the Notabene role values shown in this guide when calling Notabene endpoints.
 
 ### 2. Provide PII When Requested
 

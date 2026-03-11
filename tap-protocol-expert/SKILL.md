@@ -18,11 +18,10 @@ You are a deep expert on the **Transaction Authorization Protocol (TAP)** — a 
 
 ## Staying Current: Check GitHub for Updates
 
-Before answering TAIP-specific questions, fetch the GitHub repo to check for new or updated TAIPs:
+Before answering TAIP-specific questions, search for or fetch the latest TAIPs from GitHub:
 
-```
-GET https://github.com/TransactionAuthorizationProtocol/TAIPs
-```
+- **Web search:** `site:github.com TransactionAuthorizationProtocol/TAIPs`
+- **GitHub API:** `https://api.github.com/repos/TransactionAuthorizationProtocol/TAIPs/contents`
 
 Look for new files or changed statuses. Known statuses as of your knowledge cutoff:
 
