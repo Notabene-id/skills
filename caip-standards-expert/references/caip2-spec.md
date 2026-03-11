@@ -64,6 +64,19 @@ starknet:SN_GOERLI
 chainstd:8c3444cf8970a9e41a706fab93e7a6c4
 ```
 
+## Verifying EVM Chain IDs
+
+The `eip155` namespace has thousands of registered chains. The authoritative registry is **[ethereum-lists/chains](https://github.com/ethereum-lists/chains)** (browsable at [chainlist.org](https://chainlist.org)). Always verify the correct chain ID there before using an `eip155:` identifier. Each chain has a JSON file with metadata including name, RPC URLs, native currency, and explorers.
+
+To fetch chain data:
+```bash
+# List all chains
+gh api repos/ethereum-lists/chains/contents/_data/chains -q '.[].name'
+
+# Fetch specific chain metadata (e.g., Polygon = 137)
+curl -s https://raw.githubusercontent.com/ethereum-lists/chains/master/_data/chains/eip155-137.json
+```
+
 ## Common Namespace Reference Table
 
 | Namespace | Ecosystem | Reference Format | How to Resolve |

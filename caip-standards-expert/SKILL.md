@@ -66,6 +66,17 @@ reference:   [-_a-zA-Z0-9]{1,32}
 
 Maximum length: 8 + 1 + 32 = **41 characters**.
 
+### EVM Chain IDs (eip155)
+
+The `eip155` namespace covers all EVM-compatible chains. There are thousands of EVM chains, each with a unique integer chain ID. The authoritative open registry is **[ethereum-lists/chains](https://github.com/ethereum-lists/chains)** — always verify the correct chain ID there before using it. Browsable at [chainlist.org](https://chainlist.org).
+
+To fetch chain metadata programmatically:
+```
+gh api repos/ethereum-lists/chains/contents/_data/chains -q '.[].name'
+# Or fetch a specific chain:
+curl -s https://raw.githubusercontent.com/ethereum-lists/chains/master/_data/chains/eip155-137.json
+```
+
 ### Common Examples
 
 ```
