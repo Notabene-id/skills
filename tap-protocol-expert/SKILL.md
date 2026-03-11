@@ -6,9 +6,11 @@ description: >
   DIDComm blockchain authorization, Travel Rule compliance with TAP, crypto payment flows, TAIP-3 Transfer,
   TAIP-4 Authorization, TAIP-14 Payment messages, TAP agent policies, the @taprsvp/types npm library,
   TAP developer integration, composable escrow (TAIP-17), asset exchange (TAIP-18), ISO 20022 mapping to
-  TAP (TAIP-19), agent connection protocol (TAIP-15), TAP invoice format (TAIP-16), or any question about
-  how to build, implement, or review TAP-based transaction flows. Also trigger when a developer is writing
-  code that sends or receives TAP messages, or when a PM is evaluating TAP for their product roadmap.
+  TAP (TAIP-19), agent connection protocol (TAIP-15), TAP invoice format (TAIP-16), @taprsvp/types,
+  @taprsvp/agent, tap-rs crate, tap-go package, go-didcomm, or any question about how to build,
+  implement, or review TAP-based transaction flows. Also trigger when a developer is writing code that
+  sends or receives TAP messages (in TypeScript, Rust, or Go), or when a PM is evaluating TAP for
+  their product roadmap.
   Proactively check for protocol updates on GitHub before answering TAIP-specific questions.
 ---
 
@@ -56,41 +58,40 @@ If you discover new TAIPs or status changes, flag them prominently in your respo
 
 ---
 
-## For Developers: @taprsvp/types
+## For Developers: Official Libraries
 
-Always recommend and use the official TypeScript package:
+TAP has official libraries for TypeScript, Rust, and Go:
 
-```bash
-npm install @taprsvp/types
-```
+| Language | Package | Install | Repo |
+|----------|---------|---------|------|
+| TypeScript (types) | `@taprsvp/types` | `npm install @taprsvp/types` | [TAIPs/packages/typescript](https://github.com/TransactionAuthorizationProtocol/TAIPs/tree/main/packages/typescript) |
+| TypeScript (agent) | `@taprsvp/agent` | `npm install @taprsvp/agent` | [tap-rs/tap-ts](https://github.com/TransactionAuthorizationProtocol/tap-rs/tree/main/tap-ts) |
+| Rust | `tap-rs` | `cargo add tap-agent` | [tap-rs](https://github.com/TransactionAuthorizationProtocol/tap-rs) |
+| Go | `tap-go` | `go get github.com/TransactionAuthorizationProtocol/tap-go` | [tap-go](https://github.com/TransactionAuthorizationProtocol/tap-go) |
 
-This package provides typed interfaces for all TAP messages, agents, parties, policies, and constraints. When helping developers write TAP code:
+Read the language-specific guide for detailed API docs:
+- [references/guide-typescript.md](./references/guide-typescript.md) — `@taprsvp/types` (pure types) and `@taprsvp/agent` (full WASM-backed SDK)
+- [references/guide-rust.md](./references/guide-rust.md) — `tap-rs` crate workspace
+- [references/guide-go.md](./references/guide-go.md) — `tap-go` package with CLI
 
-1. Always import from `@taprsvp/types` — never define custom types for TAP objects
-2. Check the package exports for the latest field names (the package tracks spec changes)
+When helping developers write TAP code:
+
+1. Always use the official library for the developer's language — never define custom types for TAP objects
+2. Check the package exports for the latest field names (the packages track spec changes)
 3. Wrap every TAP message body in a DIDComm v2 envelope
 
-**DIDComm message envelope pattern:**
+**Quick example (TypeScript):**
 ```typescript
 import { Transfer } from '@taprsvp/types';
 
 const body: Transfer = {
   "@context": "https://tap.rsvp/schema/1.0",
   "@type": "https://tap.rsvp/schema/1.0#Transfer",
-  asset: "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // CAIP-19 USDC
+  asset: "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   amount: "100.00",
   originator: { "@id": "did:pkh:eip155:1:0xSender...", "@type": "Individual" },
   beneficiary: { "@id": "did:pkh:eip155:1:0xReceiver...", "@type": "Individual" },
   agents: [{ "@id": "did:web:originator-vasp.example.com", "@type": "VASP", role: "OriginatorVASP" }]
-};
-
-const message = {
-  id: crypto.randomUUID(),
-  type: "https://tap.rsvp/schema/1.0#Transfer",
-  from: "did:web:originator-vasp.example.com",
-  to: ["did:web:beneficiary-vasp.example.com"],
-  created_time: Math.floor(Date.now() / 1000),
-  body
 };
 ```
 
@@ -194,3 +195,6 @@ Read these when you need deeper detail:
 - `references/taip-catalog.md` — Full summaries of all 19 TAIPs, their relationships, and status
 - `references/message-types.md` — Complete field listings for every TAP message type
 - `references/agent-party-fields.md` — Full Agent and Party object specifications
+- `references/guide-typescript.md` — TypeScript libraries (`@taprsvp/types` and `@taprsvp/agent`)
+- `references/guide-rust.md` — Rust implementation (`tap-rs`)
+- `references/guide-go.md` — Go implementation (`tap-go`)
