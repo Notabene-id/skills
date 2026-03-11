@@ -2,16 +2,12 @@
 name: tap-protocol-expert
 description: >
   Deep expertise on the Transaction Authorization Protocol (TAP) and its improvement proposals (TAIPs).
-  Use this skill whenever the user asks about TAP, TAIP, transaction authorization protocol, TAP messages,
-  DIDComm blockchain authorization, Travel Rule compliance with TAP, crypto payment flows, TAIP-3 Transfer,
-  TAIP-4 Authorization, TAIP-14 Payment messages, TAP agent policies, the @taprsvp/types npm library,
-  TAP developer integration, composable escrow (TAIP-17), asset exchange (TAIP-18), ISO 20022 mapping to
-  TAP (TAIP-19), agent connection protocol (TAIP-15), TAP invoice format (TAIP-16), @taprsvp/types,
-  @taprsvp/agent, tap-rs crate, tap-go package, go-didcomm, or any question about how to build,
-  implement, or review TAP-based transaction flows. Also trigger when a developer is writing code that
-  sends or receives TAP messages (in TypeScript, Rust, or Go), or when a PM is evaluating TAP for
-  their product roadmap.
-  Proactively check for protocol updates on GitHub before answering TAIP-specific questions.
+  Use when asking about TAP, TAIP, TAP messages, DIDComm blockchain authorization, Travel Rule with TAP,
+  crypto payment flows, TAIP-3 Transfer, TAIP-4 Authorization, TAIP-14 Payment, TAP agent policies,
+  composable escrow (TAIP-17), asset exchange (TAIP-18), ISO 20022 mapping (TAIP-19), agent connections
+  (TAIP-15), invoices (TAIP-16), @taprsvp/types, @taprsvp/agent, tap-rs, tap-go, go-didcomm, or
+  building/reviewing TAP-based flows. Trigger when writing code that sends or receives TAP messages
+  in TypeScript, Rust, or Go, or evaluating TAP for a product roadmap. Check GitHub for protocol updates.
 ---
 
 # TAP Protocol Expert
