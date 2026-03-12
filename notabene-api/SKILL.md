@@ -78,6 +78,23 @@ Dashboard: `https://app.eu1.notabene.id/`
 
 **Webhooks** — Notabene uses [Svix](https://svix.com/) for delivery. Configure endpoints in the dashboard. Always verify the `svix-signature` header before processing. See the travel rule guide for the verification snippet.
 
+**Webhook payload format** — All webhooks use the same envelope:
+```json
+{
+  "message": "flow.payout.created",
+  "payload": {
+    "id": "423ae44a-...",
+    "for": "did:web:notabene.id:pg",
+    "amount": "1300",
+    "currency": "USD"
+  },
+  "version": "1.0.0"
+}
+```
+- Event type is in the `message` field (NOT `eventType`)
+- Transfer ID is in `payload.id` (NOT a top-level `id`)
+- All event-specific data is nested inside `payload`
+
 **DIDs (Decentralized Identifiers)** — Notabene identifies every actor with a DID:
 - Your entity: `did:web:your-domain.com` (configured in dashboard)
 - Customers: `did:email:user@example.com` or `did:pkh:eip155:1:0xAddress`

@@ -270,20 +270,25 @@ When a PIA creates a pay-in that involves your customer, you receive the **`flow
 
 ```json
 {
-  "eventType": "flow.payin.created",
-  "for": "did:web:your-pra.com",
-  "id": "<transfer-id>",
-  "transactionType": "PAYIN",
-  "customerDid": "did:email:customer@example.com",
-  "merchantDid": "did:web:merchant.com",
-  "paymentLink": "https://connect.notabene.id/payin/<token>",
-  "amount": "1000.00",
-  "currency": "USD",
-  "supportedAssets": [
-    "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-  ]
+  "message": "flow.payin.created",
+  "payload": {
+    "id": "<transfer-id>",
+    "for": "did:web:your-pra.com",
+    "transactionType": "PAYIN",
+    "customerDid": "did:email:customer@example.com",
+    "merchantDid": "did:web:merchant.com",
+    "paymentLink": "https://connect.notabene.id/payin/<token>",
+    "amount": "1000.00",
+    "currency": "USD",
+    "supportedAssets": [
+      "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    ]
+  },
+  "version": "1.0.0"
 }
 ```
+
+> **Webhook format:** All Notabene webhooks use the same envelope: `message` contains the event type, `payload` contains all event-specific data (including the transfer `id`), and `version` is always `"1.0.0"`. See [Webhook Payload Structure](./guide-travel-rule-api.md#webhook-payload-structure) for details.
 
 You can also poll for pay-ins:
 

@@ -98,13 +98,29 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 
 ### Webhook Payload Structure
 
+All Notabene webhooks use the same envelope format:
+
 ```json
 {
-  "message": "tap.requireAuthorizationRequested",
-  "payload": { ... },
+  "message": "flow.payout.created",
+  "payload": {
+    "id": "423ae44a-...",
+    "for": "did:web:notabene.id:pg",
+    "amount": "1300",
+    "currency": "USD",
+    ...
+  },
   "version": "1.0.0"
 }
 ```
+
+| Field | Description |
+|---|---|
+| `message` | The event type (e.g., `notification.transferStatusChanged`, `tap.requirePresentationRequested`, `flow.payin.created`) |
+| `payload` | All event-specific data, including the transfer `id` and other fields |
+| `version` | Always `"1.0.0"` |
+
+> **Important:** The event type is in the `message` field (not `eventType`). The transfer ID is in `payload.id` (not a top-level `id`). All event-specific data is nested inside `payload`.
 
 ---
 
