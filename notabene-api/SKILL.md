@@ -1,17 +1,16 @@
 ---
 name: notabene-api
 description: >
-  Notabene API integration guide for developers and coding agents. Use this skill whenever
-  anyone is building an integration with Notabene, writing code against Notabene APIs,
-  debugging an integration, or asking how Notabene works technically. Triggers on: "integrate
-  with Notabene", "Notabene API", "Travel Rule API", "Flow API", "pay-in", "VASP integration",
-  "originator", "beneficiary VASP", "PIA", "PRA", "infrastructure provider", "notabene
-  webhook", "authorize transfer", "settle transfer", "append PII", "IVMS101", "CAIP-19",
-  "TAP", "DIDComm", "entityDID", "notabene auth token", "SafeConnect", "WithdrawalAssist",
-  "DepositAssist", "DepositRequest", "ConnectWallet", "customer token", "javascript sdk",
-  "embedded component", "wallet service", "custody provider", "IP agent", "agent chain",
-  "agentAdded", "settlement address", "settlement asset", "on-chain settlement",
-  or any question about sending or receiving payments or travel rule
+  Notabene API integration guide for developers and coding agents. Use when building an
+  integration with Notabene, writing code against Notabene APIs, debugging an integration,
+  or asking how Notabene works technically. Triggers on: "Notabene API", "Travel Rule API",
+  "Flow API", "pay-in", "VASP integration", "originator", "beneficiary VASP", "PIA", "PRA",
+  "infrastructure provider", "notabene webhook", "authorize transfer", "settle transfer",
+  "append PII", "IVMS101", "entityDID", "notabene auth token", "SafeConnect",
+  "WithdrawalAssist", "DepositAssist", "DepositRequest", "ConnectWallet", "customer token",
+  "javascript sdk", "embedded component", "wallet service", "custody provider", "IP agent",
+  "agent chain", "agentAdded", "settlement address", "settlement asset",
+  "on-chain settlement", or any question about sending or receiving payments or travel rule
   data via Notabene. Use proactively whenever a developer writes code calling Notabene
   endpoints.
 ---
