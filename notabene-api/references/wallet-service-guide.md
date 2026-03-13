@@ -223,11 +223,16 @@ Authorization: Bearer {token}
 
 {
   "from": "did:pkh:eip155:1:0xClientWalletAddress",
-  "to": "did:web:client-vasp-did"
+  "to": "did:web:client-vasp-did",
+  "custodian": "did:web:your-wallet-service.com"
 }
 ```
 
-Use your customer's DID as the `to` field. This allows Notabene to identify that the address belongs to your client and route incoming transfers to you for confirmation.
+- `from` — the blockchain address (as a `did:pkh`) that your wallet service controls on behalf of the client
+- `to` — your customer's entity DID (the VASP you custody for)
+- `custodian` — **your own entity DID** (the wallet service / IP)
+
+The `custodian` field is critical: it tells Notabene that you manage this address on behalf of the client. Without it, Notabene can identify the client VASP but won't know to add you as an agent when transfers arrive at this address.
 
 ### Step 3: Select settlement asset (Flow only)
 
@@ -315,11 +320,16 @@ Authorization: Bearer {token}
 
 {
   "from": "did:pkh:eip155:1:0xClientWalletAddress",
-  "to": "did:web:client-vasp-did"
+  "to": "did:web:client-vasp-did",
+  "custodian": "did:web:your-wallet-service.com"
 }
 ```
 
-Use your customer's DID as the `to` field. When a transfer arrives at this address, Notabene will ask you to confirm ownership rather than requiring manual intervention.
+- `from` — the blockchain address (as a `did:pkh`) that your wallet service controls on behalf of the client
+- `to` — your customer's entity DID (the VASP you custody for)
+- `custodian` — **your own entity DID** (the wallet service / IP)
+
+The `custodian` field is critical: it tells Notabene that you manage this address on behalf of the client. Without it, incoming transfers to this address will identify the client VASP but Notabene won't automatically add you as an agent — you'd need to be added manually to each transfer.
 
 ### Step 3: Confirm address ownership (Transact)
 
@@ -444,7 +454,7 @@ When you receive `notification.transferStatusChanged` with `toStatus: "SETTLED"`
 
 | Action | Method | Endpoint | Body |
 |--------|--------|----------|------|
-| Pre-register address | POST | `/entities/{entityDID}/relationships` | `{ "from": "did:pkh:...", "to": "did:web:..." }` |
+| Pre-register address | POST | `/entities/{entityDID}/relationships` | `{ "from": "did:pkh:...", "to": "did:web:...", "custodian": "did:web:..." }` |
 | Confirm relationship | PATCH | `/entities/{entityDID}/relationships?from=...&to=...` | `{}` |
 | Match on-chain deposit | GET | `/entities/{entityDID}/tx/match?settlement_id=...&settlement_address=...` | — |
 
@@ -519,6 +529,9 @@ Every webhook event is delivered at least twice. Without deduplication, you may 
 
 ### 7. Not pre-registering addresses (Transact)
 Without pre-registered relationships, every incoming transfer will require manual relationship confirmation. Pre-register addresses via the relationship API to automate this.
+
+### 8. Omitting the custodian field when registering addresses
+When calling `POST /entities/{entityDID}/relationships`, wallet services must include `"custodian": "did:web:your-wallet-service.com"` alongside `from` and `to`. Without the `custodian` field, Notabene identifies the client VASP as the address owner but does not know that a wallet service manages the address — so it cannot automatically add you as an agent to incoming transfers.
 
 ---
 
