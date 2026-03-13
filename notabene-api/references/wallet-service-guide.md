@@ -18,6 +18,97 @@ An IP is a wallet or custody service that handles on-chain operations **on behal
 
 ---
 
+## Offering Travel Rule Compliance to Your Customers
+
+As a wallet service, you can offer **travel rule integration as a service** to your customers (exchanges, VASPs, neobanks) by wrapping Notabene's Transfers API within your existing wallet transaction API. Your customers get compliant crypto transfers without building a direct Notabene integration.
+
+### How it works
+
+When your customer initiates a withdrawal or send through your wallet API:
+
+1. **Create the transfer in Notabene** on behalf of your customer using `POST /entities/{entityDID}/tx`. Add your customer as the primary originating agent and yourself as an agent acting on their behalf:
+
+```json
+{
+  "ref": "withdrawal-001",
+  "originator": { "@id": "did:email:end-user@example.com" },
+  "beneficiary": { "@id": "did:email:recipient@example.com" },
+  "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "amount": "100.00",
+  "agents": [
+    {
+      "@id": "did:web:your-customer-vasp.com",
+      "role": "VASP",
+      "for": "did:email:end-user@example.com",
+      "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }]
+    },
+    {
+      "@id": "did:web:your-wallet-service.com",
+      "role": "IP",
+      "for": "did:web:your-customer-vasp.com"
+    }
+  ]
+}
+```
+
+2. **Wait for authorization** — your customer's compliance team reviews the transfer through their Notabene dashboard and authorizes or rejects it. You receive `notification.transferStatusChanged` with `toStatus: "AUTHORIZED"` once both your customer and any counterparty compliance checks pass.
+
+3. **Execute on-chain settlement** — once authorized, send the funds on-chain and report settlement via `POST /entities/{entityDID}/tx/{transferId}/settle`.
+
+### Key details
+
+- **Customer DID:** Your customer's entity DID (typically `did:web:customer-domain.com`), obtained during onboarding. You need this to add them as the primary agent.
+- **Agent chain:** Your customer is the agent `for` the end-user (originator/beneficiary). You are the agent `for` your customer. This chain determines who handles compliance (your customer) vs. who handles settlement (you).
+- **Authorization wait:** This is the critical addition to your existing wallet flow. Do **not** broadcast the on-chain transaction until you receive the `AUTHORIZED` webhook. Your customer's compliance team must approve the transfer first.
+- **Incoming transfers:** For deposits, pre-register your customer's addresses via the Relationships API and handle address ownership confirmation on their behalf. See the [Beneficiary Side](#beneficiary-side-you-receive-funds) section.
+
+---
+
+## Offering Billing / Pay-in APIs to Your Customers
+
+You can also wrap Notabene's **Flow Pay-ins API** to offer billing and invoicing capabilities to your customers. Your customers (merchants, SaaS platforms) get compliant payment collection without building a direct Flow integration.
+
+### How it works
+
+When your customer wants to create an invoice or payment request:
+
+1. **Register your customer** as a Flow customer:
+
+```
+POST /entity/{entityDID}/flow/customers
+```
+
+2. **Create pay-ins on their behalf** using `POST /entity/{entityDID}/flow/customers/{customerDID}/pay-ins`, adding yourself as an agent acting on behalf of the PIA (your customer):
+
+```json
+{
+  "ref": "INV-2025-001",
+  "amount": "1000.00",
+  "currency": "USD",
+  "supportedAssets": [
+    "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+  ],
+  "customer": {
+    "@id": "did:email:payer@example.com"
+  },
+  "agents": [
+    {
+      "@id": "did:web:your-wallet-service.com",
+      "for": "did:web:your-customer-merchant.com",
+      "role": "IP"
+    }
+  ]
+}
+```
+
+3. **Distribute the payment link** — return the `paymentLink` from the response to your customer for distribution to their payers.
+
+4. **Handle settlement** — when the payer's side authorizes and settles, you receive the settlement on behalf of your customer and credit their account.
+
+This pattern lets you build a complete billing API on top of Notabene Flow, with compliance handled automatically.
+
+---
+
 ## Authentication
 
 All API calls require an OAuth2 access token:

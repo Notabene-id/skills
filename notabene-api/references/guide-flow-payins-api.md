@@ -142,6 +142,14 @@ DELETE /entity/{entityDID}/flow/customers/{customerDID}
 
 Subscribe to Flow webhook events in the Notabene dashboard. See [Webhook Event Reference](#webhook-event-reference) for the full list.
 
+### Delegating Settlement to a Wallet Service (IP)
+
+Both PIAs and PRAs can add a supported **wallet service (Infrastructure Provider / IP)** as an agent to handle all blockchain settlement on their behalf. This lets you focus on the payment and compliance aspects without managing wallets, on-chain transfers, or settlement addresses.
+
+The IP handles: wallet provisioning, asset selection, settlement address management, on-chain execution, and settlement reporting. You handle: creating pay-ins, distributing payment links, authorization decisions, and reconciliation.
+
+See [Infrastructure Provider Flow](#infrastructure-provider-flow-ip) for how IPs are added, and the [Wallet Service Integration Guide](./wallet-service-guide.md) for the full IP perspective.
+
 ---
 
 ## Initiator Flow (PIA)

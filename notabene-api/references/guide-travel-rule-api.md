@@ -153,6 +153,45 @@ If your compliance team needs additional data from the customer (e.g., to clarif
 
 You can also use the **Deposit Request** component to improve the deposit experience on your deposit screen. This component adds additional details to your deposit QR code, enabling the sender's VASP to pre-fill transfer information and resulting in smoother, faster deposits.
 
+### Delegating Settlement to a Wallet Service (IP)
+
+If you don't want to handle blockchain settlement yourself, you can add a supported **wallet service (Infrastructure Provider / IP)** as an agent to your transfers. The IP handles all address management, on-chain settlement, and transaction reporting on your behalf. You focus solely on compliance — PII exchange, authorization decisions, and beneficiary verification.
+
+**How it works:**
+
+When creating a transfer, add the wallet service as an agent acting on your behalf:
+
+```json
+{
+  "ref": "withdrawal-001",
+  "originator": { "@id": "did:email:customer@example.com" },
+  "beneficiary": { "@id": "did:email:recipient@example.com" },
+  "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "amount": "100.00",
+  "agents": [
+    {
+      "@id": "did:web:your-vasp.com",
+      "role": "VASP",
+      "for": "did:email:customer@example.com",
+      "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }]
+    },
+    {
+      "@id": "did:web:wallet-service.com",
+      "role": "IP",
+      "for": "did:web:your-vasp.com"
+    }
+  ]
+}
+```
+
+The IP receives a `notification.transferAgentAdded` webhook, provisions a wallet, and waits for the transfer to reach `AUTHORIZED` status before executing settlement on-chain. Your responsibilities remain:
+
+- Creating the transfer
+- Responding to PII requests (`tap.requirePresentationRequested`)
+- Authorizing or rejecting based on compliance checks
+
+For incoming transfers, the IP handles address ownership confirmation and settlement reconciliation. See the [Wallet Service Integration Guide](./wallet-service-guide.md) for the full IP perspective.
+
 ---
 
 ## Outgoing Transfers (Originator)
