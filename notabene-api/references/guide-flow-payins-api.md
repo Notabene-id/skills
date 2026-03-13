@@ -24,8 +24,10 @@ For general authentication and webhook setup, see [guide-travel-rule-api.md](./g
 - [Responder Flow (PRA)](#responder-flow-pra)
   - [Step 1: Receive the Pay-in Request](#step-1-receive-the-pay-in-request)
   - [Step 2: Request Customer Authorization](#step-2-request-customer-authorization)
-  - [Step 3: Select Asset, Authorize, or Reject](#step-3-select-asset-authorize-or-reject)
-  - [Step 4: Execute Settlement](#step-4-execute-settlement)
+  - [Step 3: Select Asset](#step-3-select-asset)
+  - [Step 4: Authorize or Reject](#step-4-authorize-or-reject)
+  - [Step 5: Execute Settlement](#step-5-execute-settlement)
+  - [Step 6: Report Settlement](#step-6-report-settlement)
 - [Infrastructure Provider Flow (IP)](#infrastructure-provider-flow-ip)
   - [How IPs Are Added](#how-ips-are-added)
   - [Handling Settlement as an IP](#handling-settlement-as-an-ip)
@@ -316,8 +318,10 @@ Authorization: Bearer <token>
 
 1. Receive the pay-in request via webhook or API
 2. Provide an authorization URL so the customer can approve the payment (or skip this to auto-authorize)
-3. Run compliance checks and authorize or reject the transfer
-4. Execute settlement and report it
+3. Select the payment asset (asset only, no address)
+4. Wait for the PIA's settlement address, then authorize or reject the transfer
+5. Send funds on-chain to the PIA's settlement address
+6. Report settlement by calling `/settle` with the transaction hash
 
 ### Step 2: Request Customer Authorization
 
@@ -352,11 +356,31 @@ This sends a **`flow.payin.authorizationRequired`** webhook to the PIA, which in
 
 If your system auto-authorizes payments (e.g., for pre-approved connections or low-value transfers), you can skip this step and proceed directly to authorize.
 
-### Step 3: Select Asset, Authorize, or Reject
+### Step 3: Select Asset
 
-The PRA selects one of the `supportedAssets` from the pay-in request on behalf of the payer. This is done as part of authorization by including a `settlement_address` for the chosen asset.
+The PRA selects one of the `supportedAssets` from the pay-in request on behalf of the payer. This is done via a separate asset selection endpoint — **not** as part of the authorize call.
 
-**Authorize (with asset selection):**
+```
+POST /entities/{entityDID}/flow/payouts/{transferId}/settlement_asset
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{
+  "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+}
+```
+
+Send **only** the `asset` field. Do **not** include a `settlementAddress` — that refers to the PIA's receiving address (from their `fallbackSettlementAddresses`), not the PRA's sending address. The PIA will confirm which of their addresses to use.
+
+After asset selection, the PIA responds with their settlement address. You receive the **`flow.payin.settlementAddressSelected`** webhook containing the address where funds should be sent.
+
+### Step 4: Authorize or Reject
+
+Once you receive the PIA's settlement address (via the `flow.payin.settlementAddressSelected` webhook), authorize the transfer. The authorize call takes an **empty body** — asset selection was already handled in Step 3.
+
+**Authorize:**
 
 ```
 POST /entities/{entityDID}/tx/{transferId}/authorize
@@ -365,12 +389,8 @@ Content-Type: application/json
 ```
 
 ```json
-{
-  "settlement_address": "eip155:1:0xPayerWalletAddress"
-}
+{}
 ```
-
-The `settlement_address` indicates which asset the payer will use and from which address funds will be sent. The PIA receives this via the `flow.payin.settlementAddressSelected` webhook and responds with their own settlement address where funds should be sent.
 
 **Reject:**
 
@@ -387,9 +407,13 @@ Content-Type: application/json
 }
 ```
 
-### Step 4: Execute Settlement
+### Step 5: Execute Settlement
 
-Once both parties have authorized and the PIA has provided a settlement address (via the `flow.payin.fundingAdded` webhook), send the funds on-chain and report the settlement:
+Once both parties have authorized and the PIA has provided a settlement address (via the `flow.payin.settlementAddressSelected` webhook), send the funds on-chain to the PIA's settlement address.
+
+### Step 6: Report Settlement
+
+After the on-chain transfer confirms, report the settlement to Notabene with the transaction hash:
 
 ```
 POST /entities/{entityDID}/tx/{transferId}/settle
@@ -498,21 +522,22 @@ PIA (Merchant side)                       PRA (Payer side)
    → Direct customer to PRA auth page
                                              Customer approves on PRA auth page
 
-                                          6. POST /tx/{id}/authorize
-                                             (selects asset + settlement_address)
-   ← flow.payin.settlementAddressSelected
+                                          6. POST /flow/payouts/{id}/settlement_asset
+                                             (selects asset only, no address)
+   ← flow.payin.assetSelected
 
-   PIA returns settlement address
-   ← flow.payin.fundingAdded              ← flow.payin.fundingAdded
+   PIA confirms settlement address
+   ← flow.payin.settlementAddressSelected              ← flow.payin.settlementAddressSelected
 
-   7. POST /tx/{id}/authorize
+                                          7. POST /tx/{id}/authorize (empty body)
+   8. POST /tx/{id}/authorize
    ← transferStatusChanged(AUTHORIZED)    ← transferStatusChanged(AUTHORIZED)
 
-                                          8. Send funds on-chain (PRA or IP)
-                                          9. POST /tx/{id}/settle
+                                          9. Send funds on-chain (PRA or IP)
+                                          10. POST /tx/{id}/settle
    ← transferStatusChanged(SETTLED)       ← transferStatusChanged(SETTLED)
 
-10. Reconcile and mark invoice paid
+11. Reconcile and mark invoice paid
 ```
 
 ---
@@ -536,7 +561,7 @@ PIA (Merchant side)                       PRA (Payer side)
 | -------------------------------------- | --------------------------------------------- | ----------------------------------------------- |
 | `flow.payin.created`                   | Pay-in request received from PIA              | Surface to payer for approval                   |
 | `flow.payin.agentAdded`               | Your agent was added to the transfer          | Confirm agent assignment                        |
-| `flow.payin.fundingAdded`             | PIA provided settlement address for funds     | Send funds to this address                      |
+| `flow.payin.settlementAddressSelected`             | PIA provided settlement address for funds     | Call `/authorize`, then send funds to this address |
 | `notification.transferStatusChanged`   | Transfer status changed (e.g., `AUTHORIZED`)  | Call `/settle` when `toStatus: "AUTHORIZED"`    |
 
 ### For IPs (Infrastructure Providers)
