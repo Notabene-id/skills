@@ -28,10 +28,10 @@ Notabene provides two primary APIs. Read the relevant guide(s) before writing an
 |---|---|
 | Travel Rule compliance (VASP-to-VASP PII exchange, outgoing/incoming crypto transfers) | [guide-travel-rule-api.md](./references/guide-travel-rule-api.md) |
 | Flow pay-ins (stablecoin/fiat pull payments with merchant invoicing, payment links) | [guide-flow-payins-api.md](./references/guide-flow-payins-api.md) |
-| Wallet service / custody provider acting as an Infrastructure Provider (IP) in Flow transactions | [wallet-service-guide.md](./references/wallet-service-guide.md) |
+| Wallet service / custody provider acting as an Infrastructure Provider (IP) in Flow or Transact | [wallet-service-guide.md](./references/wallet-service-guide.md) |
 | Embedding Travel Rule UI in your frontend (withdrawal screen, deposit screen, wallet verification) | [guide-javascript-sdk.md](./references/guide-javascript-sdk.md) |
 
-If you're unsure: **Travel Rule** = you are a VASP moving customer funds between blockchain addresses and need to comply with FATF regulations. **Flow** = you are building a payment product where a merchant requests money from a customer. **Wallet Service / IP** = you are a custody or wallet provider that handles on-chain operations on behalf of a PIA or PRA in Flow transactions. **JavaScript SDK** = you need a UI component that collects Travel Rule data from your users inside your web app.
+If you're unsure: **Travel Rule** = you are a VASP moving customer funds between blockchain addresses and need to comply with FATF regulations. **Flow** = you are building a payment product where a merchant requests money from a customer. **Wallet Service / IP** = you are a custody or wallet provider that handles on-chain operations on behalf of another institution in Flow or Transact transactions. **JavaScript SDK** = you need a UI component that collects Travel Rule data from your users inside your web app.
 
 > **Flow and Travel Rule:** Flow transactions automatically feed into Notabene's Travel Rule compliance workflows. If your primary use case is payment flows via Flow, you do **not** need to separately integrate the Travel Rule API — compliance is handled for you as part of the Flow protocol.
 
@@ -162,35 +162,39 @@ Read [`references/guide-flow-payins-api.md`](./references/guide-flow-payins-api.
 
 ## Wallet Service / Infrastructure Provider (IP) — Quick orientation
 
-Read [`references/wallet-service-guide.md`](./references/wallet-service-guide.md) for the complete guide.
+Read [`references/wallet-service-guide.md`](./references/wallet-service-guide.md) for the complete guide. Covers both **Flow** (payments) and **Transact** (travel rule transfers).
 
-As a wallet service (Infrastructure Provider / IP), you handle on-chain operations **on behalf of** another institution (a PIA or PRA). When a PIA or PRA adds you as their agent in a Flow transaction, your responsibilities are:
+As a wallet service (Infrastructure Provider / IP), you handle on-chain operations **on behalf of** another institution. When an institution adds you as their agent in a transaction, your responsibilities are:
 
 1. **Provision a wallet** for the client institution
-2. **Determine your role** (PRA or PIA) by tracing the agent chain
-3. **Select settlement assets** and/or **provide settlement addresses**
-4. **Execute on-chain transfers** when settlement is required
-5. **Report settlement** back to Notabene
+2. **Determine your role** (originator side or beneficiary side) by tracing the agent chain
+3. **Select settlement assets** and/or **provide settlement addresses** (Flow)
+4. **Confirm address ownership** for your clients (Transact)
+5. **Execute on-chain transfers** when settlement is required
+6. **Report settlement** back to Notabene
 
-**Role determination via the agent chain:** The transfer's `agents` array contains `{ agent, for }` pairs. Starting from your entity DID, follow the `for` chain: if it reaches the `originator`, you are the **PRA** (payer side — you send funds). If it reaches the `beneficiary`, you are the **PIA** (payee side — you receive funds).
+> In Flow transactions, originator side = **PRA** (Payment Responding Agent), beneficiary side = **PIA** (Payment Initiating Agent).
 
-**As PRA (you send funds):**
-1. Select settlement asset: `POST /entities/{entityDID}/flow/payouts/{transferId}/settlement_asset` with `{ "asset": "eip155:..." }` — **no address**, only the asset
-2. Authorize: `POST /entities/{entityDID}/tx/{transferId}/authorize` with empty body `{}`
-3. Wait for **both** `AUTHORIZED` status **and** a settlement address from the PIA before executing on-chain
-4. Execute on-chain ERC-20 transfer to the PIA's settlement address
+**Role determination via the agent chain:** The transfer's `agents` array contains `{ agent, for }` pairs. Starting from your entity DID, follow the `for` chain: if it reaches the `originator`, you are on the **originator side** (you send funds). If it reaches the `beneficiary`, you are on the **beneficiary side** (you receive funds).
+
+**Originator side (you send funds):**
+1. Pre-register client addresses via `POST /entities/{entityDID}/relationships` (Transact — recommended)
+2. Select settlement asset (Flow only): `POST /entities/{entityDID}/flow/payouts/{transferId}/settlement_asset` with `{ "asset": "eip155:..." }`
+3. Authorize: `POST /entities/{entityDID}/tx/{transferId}/authorize` with empty body `{}`
+4. Wait for `AUTHORIZED` status (all parties including client's compliance team) before settling on-chain
 5. Report: `POST /entities/{entityDID}/tx/{transferId}/settle` with `{ "settlementId": "eip155:{chainId}:tx/{txHash}" }`
 
-**As PIA (you receive funds):**
-1. Authorize immediately: `POST /entities/{entityDID}/tx/{transferId}/authorize` with empty body `{}`
-2. When the PRA selects an asset (`assetSelected` event), provide your settlement address: `POST /entities/{entityDID}/flow/payins/{transferId}/settlement_asset` with `{ "asset": "...", "settlementAddress": "eip155:..." }`
-3. Verify settlement when `SETTLED` status arrives
-
-**Key webhook events:** `flow.payin.agentAdded` / `flow.payout.agentAdded` (you are added as agent), `flow.payin.assetSelected` / `flow.payout.assetSelected` (asset selected), `flow.payin.settlementAddressSelected` / `flow.payout.settlementAddressSelected` (settlement address provided), `notification.transferStatusChanged` → `AUTHORIZED` / `SETTLED`.
+**Beneficiary side (you receive funds):**
+1. Pre-register client addresses via `POST /entities/{entityDID}/relationships` (Transact — recommended)
+2. Confirm address ownership when `tap.requireRelationshipConfirmationRequested` arrives (Transact)
+3. Authorize: `POST /entities/{entityDID}/tx/{transferId}/authorize` with empty body `{}`
+4. Provide settlement address when asset is selected (Flow only): `POST /entities/{entityDID}/flow/payins/{transferId}/settlement_asset` with `{ "asset": "...", "settlementAddress": "eip155:..." }`
+5. Verify settlement when `SETTLED` status arrives
 
 **Critical pitfalls:**
-- The `authorize` endpoint takes an **empty body** `{}` — asset/address go through separate `settlement_asset` endpoints
-- PRA sends **asset only** (no address); PIA sends **both asset and address**
+- The `authorize` endpoint takes an **empty body** `{}` — asset/address go through separate `settlement_asset` endpoints (Flow)
+- Originator side sends **asset only** (no address); beneficiary side sends **both asset and address** (Flow)
+- Pre-register addresses via the relationship API to avoid manual confirmation on every incoming transfer (Transact)
 - Webhooks are delivered **at least twice** — handlers must be idempotent
 - Use an atomic claim mechanism to prevent double settlement when `AUTHORIZED` and `settlementAddressSelected` arrive concurrently
 

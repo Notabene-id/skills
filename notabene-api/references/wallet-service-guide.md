@@ -1,18 +1,20 @@
-# Wallet Service Integration Guide for Notabene Flow
+# Wallet Service Integration Guide
 
-This guide explains how a wallet service (Infrastructure Provider / IP) participates in Notabene Flow transactions. It is based on real implementation experience building a custodial wallet agent on the Tempo testnet.
+This guide explains how a wallet service (Infrastructure Provider / IP) participates in Notabene transactions — both **Flow** (payment) and **Transact** (travel rule transfer) products. 
 
 ---
 
 ## What is an Infrastructure Provider (IP)?
 
-An IP is a wallet or custody service that handles on-chain operations on behalf of a PIA (Payment Initiating Agent / merchant side) or PRA (Payment Responding Agent / payer side). When a PIA or PRA adds you as their agent in a Flow transaction, you:
+An IP is a wallet or custody service that handles on-chain operations **on behalf of** another institution. When an originator-side or beneficiary-side institution adds you as their agent in a transaction, you:
 
 1. Provision a wallet for the client
-2. Determine your role (PRA or PIA) based on the agent chain
+2. Determine your role (originator side or beneficiary side) based on the agent chain
 3. Select settlement assets and/or provide settlement addresses
 4. Execute on-chain transfers when settlement is required
 5. Report settlement back to Notabene
+
+> **Flow terminology:** In Flow transactions, the originator side is called the **PRA** (Payment Responding Agent / payer side) and the beneficiary side is called the **PIA** (Payment Initiating Agent / merchant side). The responsibilities are the same — only the naming differs.
 
 ---
 
@@ -50,20 +52,31 @@ Register a webhook endpoint with Notabene. You will receive events with this str
 
 The event type is in `message`, the transfer ID is in `payload.id`.
 
-### Key events
+### Key events — Flow transactions
 
 | Event | When it fires | What to do |
 |-------|---------------|------------|
-| `flow.payin.agentAdded` / `flow.payout.agentAdded` | You are added as an agent to a transfer | Provision wallet, determine role, authorize |
-| `flow.payin.created` / `flow.payout.created` | A transfer is created involving you | Same as agentAdded (may arrive instead of or before it) |
-| `flow.payin.assetSelected` / `flow.payout.assetSelected` | A settlement asset has been selected | PIA: provide your settlement address |
-| `notification.transferStatusChanged` → `AUTHORIZED` | All parties have authorized | PRA: settle if you have the settlement address |
-| `flow.payin.settlementAddressSelected` / `flow.payout.settlementAddressSelected` | Settlement address selected | PRA: settle if already authorized |
-| `notification.transferStatusChanged` → `SETTLED` | Settlement is complete | PIA: verify funds received, mark complete |
+| `flow.payin.agentAdded` / `flow.payout.agentAdded` | You are added as an agent to a Flow transfer | Provision wallet, determine role, authorize |
+| `flow.payin.created` / `flow.payout.created` | A Flow transfer is created involving you | Same as agentAdded (may arrive instead of or before it) |
+| `flow.payin.assetSelected` / `flow.payout.assetSelected` | A settlement asset has been selected | Beneficiary side: provide your settlement address |
+| `notification.transferStatusChanged` → `AUTHORIZED` | All parties have authorized | Originator side: settle if you have the settlement address |
+| `flow.payin.settlementAddressSelected` / `flow.payout.settlementAddressSelected` | Settlement address selected | Originator side: settle if already authorized |
+| `notification.transferStatusChanged` → `SETTLED` | Settlement is complete | Beneficiary side: verify funds received, mark complete |
+
+### Key events — Transact (regular transfers)
+
+| Event | When it fires | What to do |
+|-------|---------------|------------|
+| `notification.transferAgentAdded` | You are added as an agent to a transfer | Provision wallet, determine role |
+| `notification.transferCreated` | A transfer is created involving you | Same as transferAgentAdded (may arrive instead of or before it) |
+| `tap.requireRelationshipConfirmationRequested` | Address ownership confirmation needed | Confirm or deny that the address belongs to your client |
+| `tap.requireAuthorizationRequested` | Authorization decision needed | Review and authorize or reject the transfer |
+| `notification.transferStatusChanged` → `AUTHORIZED` | All parties have authorized | Originator side: execute on-chain settlement |
+| `notification.transferStatusChanged` → `SETTLED` | Settlement is complete | Beneficiary side: verify funds received |
 
 ### Important: Duplicate webhooks
 
-Notabene could sends each webhook event more than once. Your handler must be idempotent. Check if you've already processed a transfer before creating records or executing settlements.
+Notabene could send each webhook event more than once. Your handler must be idempotent. Check if you've already processed a transfer before creating records or executing settlements.
 
 ---
 
@@ -86,29 +99,48 @@ To determine your role, trace the `for` chain starting from your entity DID:
 
 1. Build a map: `agent["@id"]` → `for`
 2. Starting from your DID, follow the chain: `you → for → for → ...`
-3. If the chain reaches `originator["@id"]` → you are the **PRA** (payer side, you send funds)
-4. If the chain reaches `beneficiary["@id"]` → you are the **PIA** (payee side, you receive funds)
+3. If the chain reaches `originator["@id"]` → you are on the **originator side** (you send funds)
+4. If the chain reaches `beneficiary["@id"]` → you are on the **beneficiary side** (you receive funds)
 
 ```
-you (IP) → client VASP → originator = PRA (you pay)
-you (IP) → client VASP → beneficiary = PIA (you receive)
+you (IP) → client VASP → originator = originator side (you pay)
+you (IP) → client VASP → beneficiary = beneficiary side (you receive)
 ```
+
+> In Flow transactions, originator side = **PRA**, beneficiary side = **PIA**.
 
 ---
 
-## PRA Flow (Payer Side — You Send Funds)
+## Originator Side (You Send Funds)
 
-When you are the PRA, you are responsible for selecting the settlement asset, authorizing the transfer, and executing the on-chain payment.
+When you are on the originator side, you are responsible for authorizing the transfer and executing the on-chain payment once all parties (including your client's compliance team) have authorized.
 
 ### Step 1: Provision wallet
 
-When you receive `agentAdded` or `created`:
+When you are added as an agent:
 - Create a wallet for the client agent DID if one doesn't exist
 - Fund it from a faucet (testnet) or ensure it has sufficient balance
 
-### Step 2: Select settlement asset
+### Step 2: Pre-register addresses (Transact — recommended)
 
-Check which of the transfer's `supportedAssets` you can actually settle with (i.e., tokens you hold). Pick the one with the highest balance.
+For regular transfers, pre-register your client's deposit addresses so Notabene can automatically route incoming transfers to you:
+
+```
+POST /entities/{entityDID}/relationships
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "from": "did:pkh:eip155:1:0xClientWalletAddress",
+  "to": "did:web:client-vasp-did"
+}
+```
+
+Use your customer's DID as the `to` field. This allows Notabene to identify that the address belongs to your client and route incoming transfers to you for confirmation.
+
+### Step 3: Select settlement asset (Flow only)
+
+In Flow transactions, check which of the transfer's `supportedAssets` you can actually settle with (i.e., tokens you hold). Pick the one with the highest balance.
 
 Call the **Flow payout** endpoint to declare your chosen asset:
 
@@ -120,9 +152,11 @@ Authorization: Bearer {token}
 { "asset": "eip155:42431/erc20:0x20c0000000000000000000000000000000000002" }
 ```
 
-**Important:** As PRA, you send only `{ asset }` — no settlement address. The PIA will provide their address after seeing your asset selection.
+**Important:** As originator side, you send only `{ asset }` — no settlement address. The beneficiary side will provide their address after seeing your asset selection.
 
-### Step 3: Authorize
+> In regular transfers, the asset and settlement details are determined by the transfer itself — you do not need to call this endpoint.
+
+### Step 4: Authorize
 
 Authorize the transfer with an empty body:
 
@@ -134,27 +168,30 @@ Authorization: Bearer {token}
 {}
 ```
 
-**Important:** Authorization does NOT include asset or address information. Those are communicated via the `settlement_asset` endpoints.
+**Important:** Authorization does NOT include asset or address information. In Flow, those are communicated via the `settlement_asset` endpoints.
 
-### Step 4: Wait for settlement conditions
+### Step 5: Wait for settlement conditions
 
-You must wait for **both** conditions before settling on-chain:
+You must wait for **all** conditions before settling on-chain:
 
-1. **All parties authorized** — you receive `notification.transferStatusChanged` with `toStatus: "AUTHORIZED"`
-2. **Settlement address available** — you receive `flow.payout.settlementAddressSelected` (the PIA has provided their wallet address)
+1. **All parties authorized** — you receive `notification.transferStatusChanged` with `toStatus: "AUTHORIZED"`. This means both your client and their compliance team have approved the transfer.
 
-Either event may arrive first. Only execute settlement when both conditions are met.
+**Flow only (additional condition):**
 
-### Step 5: Execute on-chain settlement
+2. **Settlement address available** — you receive `flow.payout.settlementAddressSelected` (the beneficiary side has provided their wallet address)
 
-Once both conditions are satisfied:
+Either event may arrive first. Only execute settlement when all conditions are met.
+
+### Step 6: Execute on-chain settlement
+
+Once all conditions are satisfied:
 
 1. Parse the settlement address (CAIP-10 format: `eip155:42431:0xRecipient`)
 2. Parse the asset (CAIP-19 format: `eip155:42431/erc20:0xTokenAddress`)
 3. Execute the ERC-20 `transfer(to, amount)` on-chain
 4. Wait for transaction confirmation
 
-### Step 6: Report settlement
+### Step 7: Report settlement
 
 ```
 POST /entities/{entityDID}/tx/{transferId}/settle
@@ -168,17 +205,50 @@ The `settlementId` format is `eip155:{chainId}:tx/{txHash}`.
 
 ---
 
-## PIA Flow (Payee Side — You Receive Funds)
+## Beneficiary Side (You Receive Funds)
 
-When you are the PIA, you authorize the transfer and provide your wallet address so the PRA can send you funds.
+When you are on the beneficiary side, you confirm address ownership, authorize the transfer, and provide your wallet address so the originator side can send you funds.
 
 ### Step 1: Provision wallet
 
-Same as PRA — create and fund a wallet for the client agent DID.
+Same as originator side — create and fund a wallet for the client agent DID.
 
-### Step 2: Authorize
+### Step 2: Pre-register addresses (Transact — recommended)
 
-Authorize immediately with an empty body:
+Pre-register your client's receiving addresses so incoming transfers are automatically routed to you:
+
+```
+POST /entities/{entityDID}/relationships
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "from": "did:pkh:eip155:1:0xClientWalletAddress",
+  "to": "did:web:client-vasp-did"
+}
+```
+
+Use your customer's DID as the `to` field. When a transfer arrives at this address, Notabene will ask you to confirm ownership rather than requiring manual intervention.
+
+### Step 3: Confirm address ownership (Transact)
+
+When you receive `tap.requireRelationshipConfirmationRequested`, Notabene is asking you to confirm that an address belongs to your client. The payload includes a `confirmCallbackUrl`:
+
+```
+PATCH /entities/{entityDID}/relationships?from={addressDID}&to={customerDID}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{}
+```
+
+If the address does not belong to your client, do not confirm — the transfer will be handled through other channels.
+
+> **Tip:** If you pre-registered addresses in Step 2, many relationship confirmations will be satisfied automatically.
+
+### Step 4: Authorize
+
+Authorize with an empty body:
 
 ```
 POST /entities/{entityDID}/tx/{transferId}/authorize
@@ -188,11 +258,11 @@ Authorization: Bearer {token}
 {}
 ```
 
-You don't select an asset — the PRA does that.
+You don't select an asset — the originator side does that (in Flow).
 
-### Step 3: Provide settlement address
+### Step 5: Provide settlement address (Flow only)
 
-When you receive `assetSelected` (meaning the PRA has selected an asset), provide your wallet address via the **Flow payin** endpoint:
+When you receive `assetSelected` (meaning the originator side has selected an asset), provide your wallet address via the **Flow payin** endpoint:
 
 ```
 POST /entities/{entityDID}/flow/payins/{transferId}/settlement_asset
@@ -205,9 +275,57 @@ Authorization: Bearer {token}
 }
 ```
 
-**Important:** As PIA, you send both `asset` and `settlementAddress`. The asset should match what the PRA selected. The address must be in your entity's `fallbackSettlementAddresses` list (configured in the Notabene dashboard).
+**Important:** As beneficiary side, you send both `asset` and `settlementAddress`. The asset should match what the originator side selected. The address must be in your entity's `fallbackSettlementAddresses` list (configured in the Notabene dashboard).
 
-### Step 4: Verify settlement
+### Step 6: Reconcile received transfers (Transact)
+
+When you detect an on-chain deposit to one of your client's addresses, use the **match endpoint** to find the corresponding Notabene transfer:
+
+```
+GET /entities/{entityDID}/tx/match?settlement_id={txHash}&settlement_address={destinationAddress}&direction=INCOMING
+Authorization: Bearer {token}
+```
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `settlement_id` | yes | On-chain transaction hash |
+| `settlement_address` | yes | Destination address that received funds |
+| `settlement_id_index` | no | Vout or log index (for UTXO chains or multi-transfer txs) |
+| `memo_tag` | no | Memo/tag for chains that use them (e.g., XRP, XLM) |
+| `direction` | no | `INCOMING` or `OUTGOING` |
+
+The response includes `meta.match_strategy`: `strict` (exact match), `broadened` (relaxed index matching), or `none` (no match found).
+
+If no match is found, create the transfer in Notabene so it can be tracked for compliance:
+
+```
+POST /entities/{entityDID}/tx
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "ref": "your-unique-deposit-reference",
+  "originator": { "@id": "did:pkh:eip155:1:0xSenderAddress" },
+  "beneficiary": { "@id": "did:web:client-vasp-did" },
+  "asset": "eip155:1/erc20:0xTokenAddress",
+  "amount": "100.00",
+  "agents": [
+    {
+      "@id": "did:web:your-service.example.com",
+      "role": "VASP",
+      "for": "did:web:client-vasp-did",
+      "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }]
+    }
+  ],
+  "settlementId": "0xTransactionHash"
+}
+```
+
+This ensures the deposit enters Notabene's compliance workflow. Notabene will attempt to identify the originator VASP and request travel rule data from them.
+
+**Recommended pattern:** When you detect an on-chain deposit to a client address, call the match endpoint. If a transfer is found, link it to your internal record. If no match is found, create the transfer in Notabene so it can be reconciled and compliance-tracked.
+
+### Step 7: Verify settlement
 
 When you receive `notification.transferStatusChanged` with `toStatus: "SETTLED"`, verify that you received the funds on-chain (optional but recommended).
 
@@ -215,14 +333,29 @@ When you receive `notification.transferStatusChanged` with `toStatus: "SETTLED"`
 
 ## API Endpoints Summary
 
+### Common (both Flow and Transact)
+
 | Action | Method | Endpoint | Body |
 |--------|--------|----------|------|
 | Get transfer details | GET | `/entities/{entityDID}/tx/{transferId}` | — |
 | Authorize | POST | `/entities/{entityDID}/tx/{transferId}/authorize` | `{}` |
-| Select asset (PRA) | POST | `/entities/{entityDID}/flow/payouts/{transferId}/settlement_asset` | `{ "asset": "..." }` |
-| Select asset + address (PIA) | POST | `/entities/{entityDID}/flow/payins/{transferId}/settlement_asset` | `{ "asset": "...", "settlementAddress": "..." }` |
 | Report settlement | POST | `/entities/{entityDID}/tx/{transferId}/settle` | `{ "settlementId": "..." }` |
 | Reject | POST | `/entities/{entityDID}/tx/{transferId}/reject` | `{ "reason": "...", "comment": "..." }` |
+
+### Flow only
+
+| Action | Method | Endpoint | Body |
+|--------|--------|----------|------|
+| Select asset (originator side) | POST | `/entities/{entityDID}/flow/payouts/{transferId}/settlement_asset` | `{ "asset": "..." }` |
+| Select asset + address (beneficiary side) | POST | `/entities/{entityDID}/flow/payins/{transferId}/settlement_asset` | `{ "asset": "...", "settlementAddress": "..." }` |
+
+### Transact only
+
+| Action | Method | Endpoint | Body |
+|--------|--------|----------|------|
+| Pre-register address | POST | `/entities/{entityDID}/relationships` | `{ "from": "did:pkh:...", "to": "did:web:..." }` |
+| Confirm relationship | PATCH | `/entities/{entityDID}/relationships?from=...&to=...` | `{}` |
+| Match on-chain deposit | GET | `/entities/{entityDID}/tx/match?settlement_id=...&settlement_address=...` | — |
 
 ---
 
@@ -276,22 +409,25 @@ function claimForSettlement(transferId):
 ## Common Pitfalls
 
 ### 1. Authorizing with asset/address in the body
-The `authorize` endpoint takes an **empty body** `{}`. Asset selection and address provisioning happen via the separate `settlement_asset` endpoints.
+The `authorize` endpoint takes an **empty body** `{}`. In Flow, asset selection and address provisioning happen via the separate `settlement_asset` endpoints.
 
-### 2. PRA providing a settlement address
-The PRA selects the **asset only** (no address). The PIA provides the settlement address. If the PRA includes an address that isn't in the PIA's `fallbackSettlementAddresses`, the API returns a 400 error.
+### 2. Originator side providing a settlement address (Flow)
+The originator side selects the **asset only** (no address). The beneficiary side provides the settlement address. If the originator side includes an address that isn't in the beneficiary's `fallbackSettlementAddresses`, the API returns a 400 error.
 
 ### 3. Settling before all parties authorize
-You must wait for `notification.transferStatusChanged` with `toStatus: "AUTHORIZED"` (meaning ALL parties have authorized) before executing on-chain settlement. The per-agent `notification.transferAgentStatusChanged` events fire when individual agents authorize — this is not sufficient.
+You must wait for `notification.transferStatusChanged` with `toStatus: "AUTHORIZED"` (meaning ALL parties have authorized — including your client and their compliance team) before executing on-chain settlement. The per-agent `notification.transferAgentStatusChanged` events fire when individual agents authorize — this is not sufficient.
 
-### 4. Settling before the settlement address is available
-The PRA selects the asset, then the PIA provides their settlement address. These happen asynchronously. You need both the `AUTHORIZED` status and a settlement address before you can settle.
+### 4. Settling before the settlement address is available (Flow)
+The originator side selects the asset, then the beneficiary side provides their settlement address. These happen asynchronously. You need both the `AUTHORIZED` status and a settlement address before you can settle.
 
 ### 5. Not handling duplicate webhooks
 Every webhook event is delivered at least twice. Without deduplication, you may create duplicate records, execute duplicate on-chain transfers, or hit nonce collisions.
 
 ### 6. Not handling event ordering
 `AUTHORIZED`, `settlementAddressSelected`, and `agentAdded` events can arrive in any order. Design your handlers to work regardless of which event arrives first — check current state and act accordingly.
+
+### 7. Not pre-registering addresses (Transact)
+Without pre-registered relationships, every incoming transfer will require manual relationship confirmation. Pre-register addresses via the relationship API to automate this.
 
 ---
 
@@ -303,6 +439,7 @@ Every webhook event is delivered at least twice. Without deduplication, you may 
 | CAIP-10 (account) | `eip155:42431:0x742d35Cc...` | Chain + wallet address |
 | Settlement ID | `eip155:42431:tx/0xabc123...` | Chain + transaction hash |
 | DID (entity) | `did:web:your-service.example.com` | Decentralized identifier |
+| DID (address) | `did:pkh:eip155:1:0x742d35Cc...` | Blockchain address as DID |
 
 ---
 

@@ -423,6 +423,59 @@ Content-Type: application/json
 
 **Valid rejection reasons:** `COUNTERPARTY_RISK`, `COUNTERPARTY_DUE_DILIGENCE`, `BLOCKCHAIN_RISK_SCORE`, `SANCTION_SCREENING`, `ASSET_TYPE`, `SUSPICIOUS_TRANSACTION`, `COUNTERPARTY_POLICIES`, `COUNTERPARTY_REJECTED`, `COUNTERPARTY_NO_RESPONSE`, `CANCELED_BY_INITIATOR`, `REMOVED_FROM_TRANSFER`, `TRANSFER_PARTICIPANT`, `SOURCE_ADDRESS`, `BENEFICIARY_ADDRESS`, `BENEFICIARY_NOT_FOUND`, `ORIGINATOR_REJECT_OUTGOING`, `BENEFICIARY_REJECT_INCOMING`, `COMPLIANCE_POLICIES`, `OTHER`
 
+### 4. Reconcile Received Transfers
+
+In most cases, the travel rule message arrives **before** the on-chain transaction. However, sometimes funds arrive first — or you need to match an on-chain deposit to its corresponding Notabene transfer after the fact. Use the **match endpoint** to reconcile on-chain transactions with Notabene transfers.
+
+```
+GET /entities/{entityDID}/tx/match?settlement_id={txHash}&settlement_address={destinationAddress}&direction=INCOMING
+Authorization: Bearer <token>
+```
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `settlement_id` | yes | On-chain transaction hash (e.g., `0xabc123...`) |
+| `settlement_address` | yes | Destination address that received funds |
+| `settlement_id_index` | no | Vout or log index (for UTXO chains or multi-transfer txs) |
+| `memo_tag` | no | Memo/tag for chains that use them (e.g., XRP, XLM) |
+| `direction` | no | `INCOMING` or `OUTGOING` |
+
+The response includes a `meta.match_strategy` field:
+- `strict` — exact match on all provided parameters
+- `broadened` — matched after relaxing the `settlement_id_index` constraint
+- `none` — no matching transfer found
+
+**When no match is found:** If a deposit arrives with no corresponding Notabene transfer, create the transfer in Notabene yourself so it can be tracked for compliance:
+
+```
+POST /entities/{entityDID}/tx
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{
+  "ref": "your-unique-deposit-reference",
+  "originator": { "@id": "did:pkh:eip155:1:0xSenderAddress" },
+  "beneficiary": { "@id": "did:email:your-customer@example.com" },
+  "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "amount": "100.00",
+  "agents": [
+    {
+      "@id": "did:web:your-vasp.com",
+      "role": "VASP",
+      "for": "did:email:your-customer@example.com",
+      "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }]
+    }
+  ],
+  "settlementId": "0xTransactionHash"
+}
+```
+
+This ensures the deposit enters Notabene's compliance workflow even when the originator VASP did not initiate the travel rule message. Notabene will attempt to identify the originator VASP and request travel rule data from them.
+
+**Recommended pattern:** When you detect an on-chain deposit, call the match endpoint. If a transfer is found, link it to your internal deposit record. If no match is found, create the transfer in Notabene so it can be reconciled and compliance-tracked.
+
 ---
 
 ## Transfer Statuses
