@@ -90,7 +90,7 @@ POST https://auth.notabene.id/oauth/token
 Before creating pay-ins, register your customers (merchants for PIAs, payers for PRAs):
 
 ```
-POST /entity/{entityDID}/flow/customers
+POST /entities/{entityDID}/flow/customers
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -126,13 +126,13 @@ Content-Type: application/json
 **Update a customer:**
 
 ```
-PUT /entity/{entityDID}/flow/customers
+PUT /entities/{entityDID}/flow/customers/{customerDID}
 ```
 
 **Delete a customer:**
 
 ```
-DELETE /entity/{entityDID}/flow/customers/{customerDID}
+DELETE /entities/{entityDID}/flow/customers/{customerDID}
 ```
 
 **Verification status values:** `pending`, `verified`, `rejected`, `expired`
@@ -157,7 +157,7 @@ See [Infrastructure Provider Flow](#infrastructure-provider-flow-ip) for how IPs
 ### Step 1: Create a Pay-in
 
 ```
-POST /entity/{entityDID}/flow/customers/{merchantCustomerDID}/pay-ins
+POST /entities/{entityDID}/flow/customers/{merchantCustomerDID}/payins
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -236,14 +236,14 @@ When the transfer is ready for your authorization decision (e.g., after Travel R
 **Authorize:**
 
 ```
-POST /entity/{entityDID}/tx/{transferId}/authorize
+POST /entities/{entityDID}/tx/{transferId}/authorize
 Authorization: Bearer <token>
 ```
 
 **Reject:**
 
 ```
-POST /entity/{entityDID}/tx/{transferId}/reject
+POST /entities/{entityDID}/tx/{transferId}/reject
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -262,7 +262,7 @@ When the PRA settles, you receive **`notification.transferStatusChanged`** with 
 Retrieve the final transfer state:
 
 ```
-GET /entity/{entityDID}/tx/{transferId}
+GET /entities/{entityDID}/tx/{transferId}
 Authorization: Bearer <token>
 ```
 
@@ -301,14 +301,14 @@ When a PIA creates a pay-in that involves your customer, you receive the **`flow
 You can also poll for pay-ins:
 
 ```
-GET /entity/{entityDID}/flow/pay-ins
+GET /entities/{entityDID}/flow/payins
 Authorization: Bearer <token>
 ```
 
 Retrieve details for a specific transfer:
 
 ```
-GET /entity/{entityDID}/tx/{transferId}
+GET /entities/{entityDID}/tx/{transferId}
 Authorization: Bearer <token>
 ```
 
@@ -324,7 +324,7 @@ Authorization: Bearer <token>
 Before authorizing, you typically need the customer (payer) to approve the payment. Call the authorization required endpoint to provide a URL where the customer can review and approve:
 
 ```
-POST /entity/{entityDID}/flow/payins/{payinId}/authorization_required
+POST /entities/{entityDID}/flow/payins/{payinId}/authorization_required
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -359,7 +359,7 @@ The PRA selects one of the `supportedAssets` from the pay-in request on behalf o
 **Authorize (with asset selection):**
 
 ```
-POST /entity/{entityDID}/tx/{transferId}/authorize
+POST /entities/{entityDID}/tx/{transferId}/authorize
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -375,7 +375,7 @@ The `settlement_address` indicates which asset the payer will use and from which
 **Reject:**
 
 ```
-POST /entity/{entityDID}/tx/{transferId}/reject
+POST /entities/{entityDID}/tx/{transferId}/reject
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -392,7 +392,7 @@ Content-Type: application/json
 Once both parties have authorized and the PIA has provided a settlement address (via the `flow.payin.fundingAdded` webhook), send the funds on-chain and report the settlement:
 
 ```
-POST /entity/{entityDID}/tx/{transferId}/settle
+POST /entities/{entityDID}/tx/{transferId}/settle
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -437,7 +437,7 @@ Infrastructure Providers such as wallet custody platforms, MPC wallet services, 
 **By the PRA after joining:** A PRA can add their own IP as an agent once they have been added to the transfer. This is common when the payer's wallet provider will execute the on-chain transfer:
 
 ```
-POST /entity/{entityDID}/tx/{transferId}/agents
+POST /entities/{entityDID}/tx/{transferId}/agents
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -464,7 +464,7 @@ As an IP, you receive instructions through the authorization flow from your clie
 4. **Report settlement** — Call settle with the transaction hash:
 
 ```
-POST /entity/{entityDID}/tx/{transferId}/settle
+POST /entities/{entityDID}/tx/{transferId}/settle
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -482,7 +482,7 @@ Content-Type: application/json
 ```
 PIA (Merchant side)                       PRA (Payer side)
 ─────────────────                         ────────────────
-1. POST /flow/customers/.../pay-ins
+1. POST /flow/customers/.../payins
    (with supportedAssets, optional IP agent)
    → paymentLink created
                                           ← flow.payin.created webhook

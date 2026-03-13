@@ -145,8 +145,8 @@ Read [`references/guide-flow-payins-api.md`](./references/guide-flow-payins-api.
 - **IP (Infrastructure Provider)** — optional; custody/wallet/liquidity layer that handles on-chain settlement
 
 **Core lifecycle (PIA):**
-1. Register merchants: `POST /entity/{entityDID}/flow/customers`
-2. Create pay-in: `POST /entity/{entityDID}/flow/customers/{merchantDID}/pay-ins`
+1. Register merchants: `POST /entities/{entityDID}/flow/customers`
+2. Create pay-in: `POST /entities/{entityDID}/flow/customers/{merchantDID}/payins`
 3. Send `paymentLink` to customer
 4. Authorize when ready: `POST .../tx/{id}/authorize`
 5. Reconcile on `notification.transferStatusChanged` → `SETTLED`
@@ -187,7 +187,7 @@ As a wallet service (Infrastructure Provider / IP), you handle on-chain operatio
 1. Pre-register client addresses via `POST /entities/{entityDID}/relationships` (Transact — recommended)
 2. Confirm address ownership when `tap.requireRelationshipConfirmationRequested` arrives (Transact)
 3. Authorize: `POST /entities/{entityDID}/tx/{transferId}/authorize` with empty body `{}`
-4. Provide settlement address when asset is selected (Flow only): `POST /entities/{entityDID}/flow/payins/{transferId}/settlement_asset` with `{ "asset": "...", "settlementAddress": "eip155:..." }`
+4. Provide settlement address when asset is selected (Flow only): `POST /entities/{entityDID}/flow/payins/{transferId}/settlement_address` with `{ "asset": "...", "settlementAddress": "eip155:..." }`
 5. Verify settlement when `SETTLED` status arrives
 
 **Critical pitfalls:**

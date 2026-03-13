@@ -75,10 +75,10 @@ When your customer wants to create an invoice or payment request:
 1. **Register your customer** as a Flow customer:
 
 ```
-POST /entity/{entityDID}/flow/customers
+POST /entities/{entityDID}/flow/customers
 ```
 
-2. **Create pay-ins on their behalf** using `POST /entity/{entityDID}/flow/customers/{customerDID}/pay-ins`, adding yourself as an agent acting on behalf of the PIA (your customer):
+2. **Create pay-ins on their behalf** using `POST /entities/{entityDID}/flow/customers/{customerDID}/payins`, adding yourself as an agent acting on behalf of the PIA (your customer):
 
 ```json
 {
@@ -366,7 +366,7 @@ You don't select an asset — the originator side does that (in Flow).
 When you receive `assetSelected` (meaning the originator side has selected an asset), provide your wallet address via the **Flow payin** endpoint:
 
 ```
-POST /entities/{entityDID}/flow/payins/{transferId}/settlement_asset
+POST /entities/{entityDID}/flow/payins/{transferId}/settlement_address
 Content-Type: application/json
 Authorization: Bearer {token}
 
