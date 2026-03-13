@@ -14,6 +14,7 @@ For general authentication and webhook setup, see [guide-travel-rule-api.md](./g
 - [Prerequisites](#prerequisites)
   - [Authentication](#authentication)
   - [Model Your Customers](#model-your-customers)
+  - [Supported Assets & Fallback Settlement Addresses](#supported-assets--fallback-settlement-addresses)
   - [Webhook Setup](#webhook-setup)
 - [Initiator Flow (PIA)](#initiator-flow-pia)
   - [Step 1: Create a Pay-in](#step-1-create-a-pay-in)
@@ -140,6 +141,16 @@ DELETE /entities/{entityDID}/flow/customers/{customerDID}
 **Verification status values:** `pending`, `verified`, `rejected`, `expired`
 **Verification level values:** `basic`, `enhanced`, `premium`
 
+### Supported Assets & Fallback Settlement Addresses
+
+**Supported assets** define which payment methods a PIA accepts for a pay-in. Each entry is a [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-19.md) token identifier. We recommend listing stablecoins denominated in the same currency as the invoice amount (e.g., USDC and USDT for a USD invoice) across the chains you support.
+
+**Fallback settlement addresses** are the PIA's receiving addresses — one per blockchain for each supported asset. These are specified as CAIP-10 account identifiers. We recommend that PIAs provide a `fallbackSettlementAddresses` entry for each chain they list in `supportedAssets`, so the system can automatically match the settlement address when the PRA selects an asset. You or your customer can also add bank account details as PayTo URIs (e.g., `payto://iban/DE89370400440532013000`) as a backup for customers who prefer fiat settlement. Customers paying through fiat fallback addresses are not charged through the Flow system — these are provided as a convenience mechanism.
+
+Pre-registering wallet addresses in the Wallet Service is **not required** for Flow. The `fallbackSettlementAddresses` on the pay-in (or at entity level) are sufficient.
+
+The **PRA** selects one of the `supportedAssets` on behalf of the payer, depending on what the customer has available or by helping them onramp to one of the supported tokens.
+
 ### Webhook Setup
 
 Subscribe to Flow webhook events in the Notabene dashboard. See [Webhook Event Reference](#webhook-event-reference) for the full list.
@@ -172,7 +183,11 @@ Content-Type: application/json
   "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "supportedAssets": [
     "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    "eip155:137/erc20:0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+    "eip155:137/erc20:0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+  ],
+  "fallbackSettlementAddresses": [
+    "eip155:1:0xYourEthereumAddress",
+    "eip155:137:0xYourPolygonAddress",
     "payto://iban/DE89370400440532013000"
   ],
   "customer": {
@@ -191,17 +206,15 @@ Content-Type: application/json
 | `ref`             | string   | Yes      | Unique reference for reconciliation               |
 | `amount`          | string   | No       | Payment amount                                    |
 | `currency`        | string   | No       | Fiat currency code (e.g., `USD`)                  |
-| `asset`           | string   | No       | Default asset in CAIP-19 format                   |
-| `supportedAssets` | string[] | No       | Up to 10 accepted assets — CAIP-19 tokens or PayTo URIs (see below) |
+| `asset`                      | string   | No       | Default asset in CAIP-19 format                   |
+| `supportedAssets`            | string[] | No       | Up to 10 accepted CAIP-19 token identifiers (see [Supported Assets](#supported-assets--fallback-settlement-addresses)) |
+| `fallbackSettlementAddresses`| string[] | No       | PIA's receiving addresses — one CAIP-10 address per chain, plus optional PayTo URIs for fiat (see [Supported Assets](#supported-assets--fallback-settlement-addresses)) |
 | `customer`        | object   | Yes      | Payer identity (`@id`, optional `name`, `email`)  |
 | `memo`            | string   | No       | Payment description                               |
 
-**Supported assets:** The `supportedAssets` array accepts up to 10 entries. Each entry can be either:
+**Supported assets** list the CAIP-19 tokens you accept. We recommend stablecoins denominated in the invoice currency (e.g., USDC on Ethereum and Polygon for a USD invoice). The PRA selects one of these on behalf of the payer — depending on what the customer has available or by helping them onramp to a supported token.
 
-- **CAIP-19 token identifier** — e.g., `eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` (USDC on Ethereum)
-- **PayTo URI** — e.g., `payto://iban/DE89370400440532013000` (for fiat settlement)
-
-The PRA selects one of these assets on behalf of the payer (see [Responder Flow](#responder-flow-pra)), after which the PIA returns a settlement address for that asset.
+**Fallback settlement addresses** provide a receiving address for each chain. When the PRA selects an asset, the system matches it to the corresponding `fallbackSettlementAddresses` entry by chain ID. You can also include PayTo URIs (e.g., `payto://iban/DE89370400440532013000`) as a fiat backup — customers paying via fiat fallback are not charged through Flow.
 
 **Response:**
 
