@@ -14,29 +14,12 @@ Install these skills in your Claude Code project to give your coding agent deep 
 
 ## Installation
 
-### Option 1: Plugin Marketplace (recommended)
+### Option 1: `npx skills add` (recommended)
 
-Add the marketplace and install the plugins you need:
+Install skills directly from the command line:
 
-```
-/plugin marketplace add Notabene-id/skills
-/plugin install notabene-api@notabene-skills
-/plugin install tap-protocol-expert@notabene-skills
-/plugin install caip-standards-expert@notabene-skills
-```
-
-### Option 2: Manual configuration
-
-Add skills directly to your project's `.claude/settings.json`:
-
-```json
-{
-  "skills": [
-    "github:notabene/nb-skills/notabene-api",
-    "github:notabene/nb-skills/tap-protocol-expert",
-    "github:notabene/nb-skills/caip-standards-expert"
-  ]
-}
+```sh
+npx skills add Notabene-id/skills
 ```
 
 ## License
