@@ -222,6 +222,20 @@ List entities in the network with filtering and pagination.
 
 ---
 
+### `GET /networks/gleifSearch`
+
+Search the GLEIF database for a Legal Entity Identifier (LEI).
+
+**Query Parameters:**
+
+| Name | Required | Type | Validation | Description |
+|---|---|---|---|---|
+| `leiNumber` | yes | string | Pattern: `^([A-Z0-9]){20}$` (exactly 20 alphanumeric chars) | LEI number to search |
+
+**Response** `200`: GLEIF entity data including legal name, jurisdiction, and registration details.
+
+---
+
 ## Relationships
 
 ### `POST /entities/{entityDID}/relationships`
@@ -239,12 +253,12 @@ Create a new relationship between an address and an entity. Optionally includes 
 }
 ```
 
-| Field | Required | Description |
-|---|---|---|
-| `to` | yes | DID of the target entity |
-| `from` | no | DID of the source (address) |
-| `custodian` | no | DID of the custodian |
-| `proof` | no | Ownership proof (see proof types below) |
+| Field | Required | Validation | Description |
+|---|---|---|---|
+| `to` | yes | 3–255 chars | DID of the target entity |
+| `from` | no | 3–255 chars | DID of the source (address) |
+| `custodian` | no | 3–255 chars, must match DID pattern | DID of the custodian |
+| `proof` | no | | Ownership proof (see proof types below) |
 
 **Proof types** (anyOf):
 
@@ -376,18 +390,18 @@ Create a new transfer. This is the entry point for initiating Travel Rule compli
 }
 ```
 
-| Field | Required | Type | Description |
-|---|---|---|---|
-| `ref` | yes | string | Unique reference for idempotency. Pattern: `^[a-zA-Z0-9_-]{1,64}$` |
-| `originator` | yes | object | `{ "@id": "did:..." }` |
-| `beneficiary` | yes | object | `{ "@id": "did:..." }` |
-| `asset` | yes | string | CAIP-19 asset identifier |
-| `amount` | yes | string | Decimal amount |
-| `agents` | yes | array | Array of agents (see Agent schema) |
-| `settlementId` | no | string | On-chain transaction hash |
-| `transactionValue` | no | object | `{ "amount": "...", "currency": "..." }` or null |
-| `blockchainAnalyticsAlias` | no | string | Alias for blockchain analytics |
-| `memoTag` | no | string | Memo/destination tag |
+| Field | Required | Type | Validation | Description |
+|---|---|---|---|---|
+| `ref` | yes | string | 1–64 chars, pattern: `^[a-zA-Z0-9_-]{1,64}$` | Unique reference for idempotency |
+| `originator` | yes | object | `@id`: 3–255 chars, must be a valid DID | `{ "@id": "did:..." }` |
+| `beneficiary` | yes | object | `@id`: 3–255 chars, must be a valid DID | `{ "@id": "did:..." }` |
+| `asset` | yes | string | CAIP-19 pattern or 2–20 char abbreviation (e.g. `BTC`) | Asset identifier |
+| `amount` | yes | string | Pattern: `^\d+(\.\d+)?$` (numeric, no negatives) | Decimal amount |
+| `agents` | yes | array | minItems: 1 | Array of agents (see Agent schema) |
+| `settlementId` | no | string | maxLength: 255. CAIP-220 format recommended | On-chain transaction hash |
+| `transactionValue` | no | object | `amount`: `^\d+(\.\d+)?$`; `currency`: 1–3 chars | `{ "amount": "...", "currency": "..." }` or null |
+| `blockchainAnalyticsAlias` | no | string | | Alias for blockchain analytics |
+| `memoTag` | no | string | 1–28 chars, pattern: `^[ -~]+$` (printable ASCII) | Memo/destination tag |
 
 **Agent object:**
 
@@ -455,6 +469,7 @@ Get a specific transfer with optional PII decryption and timeline.
 | `sanitize` | string | `"true"` | `"true"` or `"false"` - sanitize sensitive data |
 | `include_timeline` | string | `"false"` | Include event timeline |
 | `include_integration_results` | string | `"false"` | Include integration results |
+| `include_replaced` | boolean | `false` | Include replaced agents in the response |
 
 **Response** `200`: `{ "transfer": <Transfer object> }`
 
@@ -536,7 +551,10 @@ Authorize a transfer to proceed.
 }
 ```
 
-Both fields are optional.
+| Field | Required | Validation | Description |
+|---|---|---|---|
+| `settlementAddress` | no | Pattern: `^[a-z0-9-]+:[a-z0-9-]+:.+$` (CAIP-10) | Settlement address |
+| `memoTag` | no | 1–28 chars, printable ASCII | Memo/destination tag |
 
 **Response** `202`: `{ "message": "Transfer authorization accepted" }`
 
@@ -554,6 +572,11 @@ Reject a transfer with a reason.
   "comment": "Optional comment (required when reason is OTHER)"
 }
 ```
+
+| Field | Required | Validation | Description |
+|---|---|---|---|
+| `reason` | yes | One of the enum values below | Rejection reason |
+| `comment` | conditional | maxLength: 500. **Required** when reason is `OTHER` | Additional details |
 
 **Reason values**: `COUNTERPARTY_RISK`, `COUNTERPARTY_DUE_DILIGENCE`, `BLOCKCHAIN_RISK_SCORE`, `SANCTION_SCREENING`, `ASSET_TYPE`, `SUSPICIOUS_TRANSACTION`, `COUNTERPARTY_POLICIES`, `COUNTERPARTY_REJECTED`, `COUNTERPARTY_NO_RESPONSE`, `CANCELED_BY_INITIATOR`, `REMOVED_FROM_TRANSFER`, `TRANSFER_PARTICIPANT`, `SOURCE_ADDRESS`, `BENEFICIARY_ADDRESS`, `BENEFICIARY_NOT_FOUND`, `ORIGINATOR_REJECT_OUTGOING`, `BENEFICIARY_REJECT_INCOMING`, `COMPLIANCE_POLICIES`, `OTHER`
 
@@ -811,11 +834,15 @@ Create a new customer for Flow workflows. PII is encrypted before storage.
 |---|---|---|---|
 | `customerDid` | yes | string | Pattern: `^did:.*` |
 | `customerType` | yes | string | `natural_person` or `legal_person` |
-| `profileData` | yes | object | IVMS101-compliant profile (see below) |
+| `profileData` | yes | object | IVMS101-compliant profile (see validation below) |
 | `verificationStatus` | no | string | `pending`, `verified`, `rejected`, `expired` (default: `pending`) |
 | `verificationLevel` | no | string | `basic`, `enhanced`, `premium` (default: `basic`) |
 
-For `legal_person`, `profileData` requires `legalPerson.name` and `legalPerson.nationalIdentification`.
+**IVMS101 Validation (strict — unknown fields are rejected):**
+- **Natural persons:** `profileData.naturalPerson.name` is **required**
+- **Legal persons:** `profileData.legalPerson.name` **and** `profileData.legalPerson.nationalIdentification` are both **required**
+- When `nameIdentifier` array is provided, `primaryIdentifier` and `naturalPersonNameIdentifierType` are **required** within each entry
+- The API rejects any unrecognized fields in `profileData` — do not include extra properties
 
 **Response** `200`: Customer object with `customerDid`, `entityDid`, `customerType`, `profileData` (encrypted), `verificationStatus`, `verificationLevel`, `createdAt`, `updatedAt`.
 

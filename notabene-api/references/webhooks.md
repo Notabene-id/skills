@@ -685,6 +685,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
   "message": "flow.payin.created",
   "payload": {
     "for": "did:web:example.com",
+    "initiatedBy": "did:web:merchant.com",
     "id": "transfer-123",
     "transactionType": "PAYIN",
     "customerDid": "did:email:customer@example.com",
@@ -714,7 +715,10 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
       "id": "INV-2025-001",
       "dueDate": "2025-12-31"
     },
-    "expiry": "2025-12-31T23:59:59Z"
+    "expiry": "2025-12-31T23:59:59Z",
+    "agents": [
+      { "@id": "did:web:wallet.com", "role": "SettlementAddress", "for": "did:web:merchant.com" }
+    ]
   },
   "version": "1.0.0"
 }
@@ -725,6 +729,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
 | Field                        | Type     | Required | Description                                                |
 | ---------------------------- | -------- | -------- | ---------------------------------------------------------- |
 | `for`                        | string   | Yes      | Entity DID receiving this webhook                          |
+| `initiatedBy`                | string   | Yes      | Entity DID that created the payment                        |
 | `id`                         | string   | Yes      | Transfer ID                                                |
 | `transactionType`            | string   | Yes      | `PAYIN` or `PAYOUT`                                        |
 | `customerDid`                | string   | Yes      | Customer's DID                                             |
@@ -739,6 +744,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
 | `memo`                       | string   | No       | Payment memo/description                                   |
 | `invoice`                    | object   | No       | Invoice details (structure varies)                         |
 | `expiry`                     | string   | No       | ISO 8601 timestamp when payment request expires            |
+| `agents`                     | array    | No       | Transfer agents (`@id`, `role`, `for`)                     |
 
 **Response Required**: None (informational only).
 

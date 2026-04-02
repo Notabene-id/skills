@@ -282,14 +282,15 @@ After creation, the system automatically:
 
 **Key payload fields:**
 
-| Field         | Description                                           |
-| ------------- | ----------------------------------------------------- |
-| `originator`  | Your customer's DID                                   |
-| `beneficiary` | The recipient's DID                                   |
-| `asset`       | CAIP-19 format or Notabene abbreviation (e.g., `BTC`) |
-| `amount`      | Transfer amount as a string                           |
-| `agents`      | Chain of agents with roles and `for` relationships    |
-| `ref`         | Idempotency key for deduplication                     |
+| Field         | Validation                                    | Description                                           |
+| ------------- | --------------------------------------------- | ----------------------------------------------------- |
+| `originator`  | `@id`: 3–255 chars, valid DID                 | Your customer's DID                                   |
+| `beneficiary` | `@id`: 3–255 chars, valid DID                 | The recipient's DID                                   |
+| `asset`       | CAIP-19 pattern or 2–20 char abbreviation     | CAIP-19 format or Notabene abbreviation (e.g., `BTC`) |
+| `amount`      | Pattern: `^\d+(\.\d+)?$` (numeric string)     | Transfer amount as a string                           |
+| `agents`      | At least 1 agent required                     | Chain of agents with roles and `for` relationships    |
+| `ref`         | 1–64 chars, pattern: `^[a-zA-Z0-9_-]{1,64}$` | Idempotency key for deduplication                     |
+| `memoTag`     | 1–28 chars, printable ASCII only              | Optional memo/destination tag (e.g., XRP, XLM)        |
 
 > **Note on agent roles:** The Notabene API uses simplified role values (`VASP`, `SourceAddress`, `SettlementAddress`) that differ from the underlying TAP protocol roles (`OriginatorVASP`, `BeneficiaryVASP`, etc. — see TAIP-5). The API maps these internally. Always use the Notabene role values shown in this guide when calling Notabene endpoints.
 
@@ -332,7 +333,7 @@ Content-Type: application/json
   },
   "ivms101": {
     "originator": {
-      "originatorPersons": [
+      "originatorPerson": [
         {
           "naturalPerson": {
             "name": {
@@ -340,7 +341,7 @@ Content-Type: application/json
                 {
                   "primaryIdentifier": "Smith",
                   "secondaryIdentifier": "John",
-                  "nameIdentifierType": "LEGL"
+                  "naturalPersonNameIdentifierType": "LEGL"
                 }
               ]
             },
@@ -379,6 +380,8 @@ Content-Type: application/json
   "settlementId": "eip155:1:tx/0x3edb98c24d46d148eb926c714f4fbaa117c47b0c0821f38bfce9763604457c33"
 }
 ```
+
+The `settlementId` is the on-chain transaction hash (maxLength: 255). CAIP-220 format recommended (e.g., `eip155:{chainId}:tx/{txHash}`).
 
 ---
 
@@ -459,6 +462,11 @@ Content-Type: application/json
   "comment": "Failed sanctions check"
 }
 ```
+
+| Field | Validation | Description |
+| ----- | ---------- | ----------- |
+| `reason` | Required, one of the enum values below | Rejection reason |
+| `comment` | maxLength: 500. **Required** when reason is `OTHER` | Additional details |
 
 **Valid rejection reasons:** `COUNTERPARTY_RISK`, `COUNTERPARTY_DUE_DILIGENCE`, `BLOCKCHAIN_RISK_SCORE`, `SANCTION_SCREENING`, `ASSET_TYPE`, `SUSPICIOUS_TRANSACTION`, `COUNTERPARTY_POLICIES`, `COUNTERPARTY_REJECTED`, `COUNTERPARTY_NO_RESPONSE`, `CANCELED_BY_INITIATOR`, `REMOVED_FROM_TRANSFER`, `TRANSFER_PARTICIPANT`, `SOURCE_ADDRESS`, `BENEFICIARY_ADDRESS`, `BENEFICIARY_NOT_FOUND`, `ORIGINATOR_REJECT_OUTGOING`, `BENEFICIARY_REJECT_INCOMING`, `COMPLIANCE_POLICIES`, `OTHER`
 

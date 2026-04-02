@@ -109,7 +109,7 @@ Content-Type: application/json
           {
             "primaryIdentifier": "Doe",
             "secondaryIdentifier": "Jane",
-            "nameIdentifierType": "LEGL"
+            "naturalPersonNameIdentifierType": "LEGL"
           }
         ]
       },
@@ -140,6 +140,12 @@ DELETE /entities/{entityDID}/flow/customers/{customerDID}
 
 **Verification status values:** `pending`, `verified`, `rejected`, `expired`
 **Verification level values:** `basic`, `enhanced`, `premium`
+
+**IVMS101 Validation (strict — unknown fields are rejected):**
+- For `natural_person`: `profileData.naturalPerson.name` is **required**
+- For `legal_person`: `profileData.legalPerson.name` **and** `profileData.legalPerson.nationalIdentification` are both **required**
+- When `nameIdentifier` array is provided, `primaryIdentifier` and `naturalPersonNameIdentifierType` are **required** within each entry
+- The API rejects any unrecognized fields in `profileData`
 
 ### Supported Assets & Fallback Settlement Addresses
 
@@ -203,14 +209,16 @@ Content-Type: application/json
 
 | Field             | Type     | Required | Description                                       |
 | ----------------- | -------- | -------- | ------------------------------------------------- |
-| `ref`             | string   | Yes      | Unique reference for reconciliation               |
-| `amount`          | string   | No       | Payment amount                                    |
-| `currency`        | string   | No       | Fiat currency code (e.g., `USD`)                  |
+| `ref`             | string   | Yes      | Unique reference for reconciliation. 1–64 chars, pattern: `^[a-zA-Z0-9_-]{1,64}$` |
+| `amount`          | string   | No       | Payment amount. Pattern: `^\d+(\.\d+)?$`          |
+| `currency`        | string   | No       | Fiat currency code (e.g., `USD`). 1–3 chars       |
 | `asset`                      | string   | No       | Default asset in CAIP-19 format                   |
 | `supportedAssets`            | string[] | No       | Up to 10 accepted CAIP-19 token identifiers (see [Supported Assets](#supported-assets--fallback-settlement-addresses)) |
 | `fallbackSettlementAddresses`| string[] | No       | PIA's receiving addresses — one CAIP-10 address per chain, plus optional PayTo URIs for fiat (see [Supported Assets](#supported-assets--fallback-settlement-addresses)) |
-| `customer`        | object   | Yes      | Payer identity (`@id`, optional `name`, `email`)  |
+| `customer`        | object   | Yes      | Payer identity (`@id` required, 3–255 chars; optional `name`, `email`)  |
 | `memo`            | string   | No       | Payment description                               |
+
+> **Entity-level pay-in** (`POST /entities/{entityDID}/flow/payins`): When creating a pay-in at entity level (without a customer path param), the `merchant` object, `supportedAssets`, and `fallbackSettlementAddresses` fields are all **required** in addition to the fields above.
 
 **Supported assets** list the CAIP-19 tokens you accept. We recommend stablecoins denominated in the invoice currency (e.g., USDC on Ethereum and Polygon for a USD invoice). The PRA selects one of these on behalf of the payer — depending on what the customer has available or by helping them onramp to a supported token.
 

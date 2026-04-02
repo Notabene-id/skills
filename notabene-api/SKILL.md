@@ -154,8 +154,10 @@ Read [`references/guide-flow-payins-api.md`](./references/guide-flow-payins-api.
 **Core lifecycle (PRA):**
 1. Receive `flow.payin.created` webhook
 2. Optionally post `authorization_required` URL for customer approval
-3. Authorize with asset selection: `POST .../tx/{id}/authorize` + `{ "settlement_address": "eip155:1:0x..." }`
-4. Execute settlement and report: `POST .../tx/{id}/settle`
+3. Select asset: `POST .../flow/payouts/{id}/settlement_asset` with `{ "asset": "eip155:..." }`
+4. Wait for `flow.payin.settlementAddressSelected` webhook (PIA confirms settlement address)
+5. Authorize: `POST .../tx/{id}/authorize` with empty body `{}`
+6. Execute on-chain settlement, then report: `POST .../tx/{id}/settle`
 
 ---
 
