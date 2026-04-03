@@ -448,7 +448,7 @@ When you receive `notification.transferStatusChanged` with `toStatus: "SETTLED"`
 | Action | Method | Endpoint | Body |
 |--------|--------|----------|------|
 | Select asset (originator side) | POST | `/entities/{entityDID}/flow/payouts/{transferId}/settlement_asset` | `{ "asset": "..." }` |
-| Select asset + address (beneficiary side) | POST | `/entities/{entityDID}/flow/payins/{transferId}/settlement_asset` | `{ "asset": "...", "settlementAddress": "..." }` |
+| Select asset + address (beneficiary side) | POST | `/entities/{entityDID}/flow/payins/{transferId}/settlement_address` | `{ "asset": "...", "settlementAddress": "..." }` |
 
 ### Transact only
 
