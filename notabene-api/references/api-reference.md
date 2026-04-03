@@ -1045,20 +1045,6 @@ Authorize a pay-in by providing a settlement address.
 
 ---
 
-### `POST /entities/{entityDID}/flow/payins/{payinId}/authorization_required`
-
-Notify that the customer must visit a web URL to authorize the pay-in (used by PRAs).
-
-**Request Body** (required):
-
-```json
-{ "authorizationUrl": "https://your-app.com/authorize/payment123" }
-```
-
-**Response** `200`: `{ "message": "...", "transferId": "..." }`
-
----
-
 ## Flow Payouts
 
 ### `POST /entities/{entityDID}/flow/customers/{customerDID}/payouts`

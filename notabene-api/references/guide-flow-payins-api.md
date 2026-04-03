@@ -352,7 +352,7 @@ Authorization: Bearer <token>
 Before authorizing, you typically need the customer (payer) to approve the payment. Call the authorization required endpoint to provide a URL where the customer can review and approve:
 
 ```
-POST /entities/{entityDID}/flow/payins/{payinId}/authorization_required
+POST /entities/{entityDID}/flow/payouts/{payoutId}/authorization_required
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
