@@ -685,7 +685,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
   "message": "flow.payin.created",
   "payload": {
     "for": "did:web:example.com",
-    "initiatedBy": "did:web:merchant.com",
+    "initiatedBy": "did:web:pia-payments.com",
     "id": "transfer-123",
     "transactionType": "PAYIN",
     "customerDid": "did:email:customer@example.com",
@@ -729,7 +729,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
 | Field                        | Type     | Required | Description                                                |
 | ---------------------------- | -------- | -------- | ---------------------------------------------------------- |
 | `for`                        | string   | Yes      | Entity DID receiving this webhook                          |
-| `initiatedBy`                | string   | Yes      | Entity DID that created the payment                        |
+| `initiatedBy`                | string   | Yes      | DID of the agent that initiated the payment request        |
 | `id`                         | string   | Yes      | Transfer ID                                                |
 | `transactionType`            | string   | Yes      | `PAYIN` or `PAYOUT`                                        |
 | `customerDid`                | string   | Yes      | Customer's DID                                             |

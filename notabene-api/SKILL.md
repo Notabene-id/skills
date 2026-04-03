@@ -87,6 +87,7 @@ Dashboard: `https://app.eu1.notabene.id/`
   "payload": {
     "id": "423ae44a-...",
     "for": "did:web:notabene.id:pg",
+    "initiatedBy": "did:web:pia-payments.com",
     "amount": "1300",
     "currency": "USD"
   },

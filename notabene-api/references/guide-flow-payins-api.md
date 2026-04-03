@@ -307,6 +307,7 @@ When a PIA creates an invoice payment that involves your customer, you receive t
   "payload": {
     "id": "<transfer-id>",
     "for": "did:web:your-pra.com",
+    "initiatedBy": "did:web:pia-payments.com",
     "transactionType": "PAYIN",
     "customerDid": "did:email:customer@example.com",
     "merchantDid": "did:web:merchant.com",
