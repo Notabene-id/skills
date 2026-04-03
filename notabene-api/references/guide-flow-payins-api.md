@@ -1,6 +1,8 @@
-# Notabene Flow Pay-ins API Guide
+# Notabene Flow Invoice Payments API Guide
 
-This guide covers the API usage for Notabene Flow pay-in transactions, from both the initiator (PIA) and responder (PRA) perspectives. Flow is a compliant stablecoin payment network that coordinates identity, compliance, authorization, and settlement using the Transaction Authorization Protocol (TAP).
+This guide covers the API usage for Notabene Flow invoice payments, from both the initiator (PIA) and responder (PRA) perspectives. Flow is a B2B pull-payment network that coordinates identity, compliance, authorization, and settlement using the Transaction Authorization Protocol (TAP).
+
+What are Pull Payments and why are they needed for Invoice Payments? Payments come in two flavors. The most common ones for B2B payments and in stablecoins are known as push payments, where the sender pushes the funds to the beneficiary. This is what SWIFT and blockchains do natively. Pull payments are mostly known from the Card networks, where the transaction is initiated by the beneficiary (the merchant) to pull (or request) funds from their customers bank account. Pull payments are particularly useful for invoice payments as they can automatically reconcile with the billing or accounts receivable system and trigger amongst other things fulfillment.
 
 > **Travel Rule compliance is automatic.** Flow transactions automatically feed into Notabene's Travel Rule compliance workflows. If you are primarily focused on payment flows, you do not need to separately integrate the Travel Rule API — compliance is handled as part of the Flow protocol.
 
@@ -9,7 +11,7 @@ For general authentication and webhook setup, see [guide-travel-rule-api.md](./g
 ## Table of Contents
 
 - [Concepts](#concepts)
-  - [What is a Pay-in?](#what-is-a-pay-in)
+  - [What is an Invoice Payment?](#what-is-an-invoice-payment)
   - [Roles](#roles)
 - [Prerequisites](#prerequisites)
   - [Authentication](#authentication)
@@ -17,13 +19,13 @@ For general authentication and webhook setup, see [guide-travel-rule-api.md](./g
   - [Supported Assets & Fallback Settlement Addresses](#supported-assets--fallback-settlement-addresses)
   - [Webhook Setup](#webhook-setup)
 - [Initiator Flow (PIA)](#initiator-flow-pia)
-  - [Step 1: Create a Pay-in](#step-1-create-a-pay-in)
+  - [Step 1: Create an Invoice Payment](#step-1-create-an-invoice-payment)
   - [Step 2: Distribute Payment Link](#step-2-distribute-payment-link)
   - [Step 3: Monitor Progress via Webhooks](#step-3-monitor-progress-via-webhooks)
   - [Step 4: Authorize or Reject](#step-4-authorize-or-reject)
   - [Step 5: Reconcile Settlement](#step-5-reconcile-settlement)
 - [Responder Flow (PRA)](#responder-flow-pra)
-  - [Step 1: Receive the Pay-in Request](#step-1-receive-the-pay-in-request)
+  - [Step 1: Receive the Invoice Payment Request](#step-1-receive-the-invoice-payment-request)
   - [Step 2: Request Customer Authorization](#step-2-request-customer-authorization)
   - [Step 3: Select Asset](#step-3-select-asset)
   - [Step 4: Authorize or Reject](#step-4-authorize-or-reject)
@@ -39,9 +41,9 @@ For general authentication and webhook setup, see [guide-travel-rule-api.md](./g
 
 ## Concepts
 
-### What is a Pay-in?
+### What is an Invoice Payment?
 
-A pay-in is a **pull payment**: a merchant (or their PIA) requests payment, and the customer pays using their wallet or account through their PRA. Flow coordinates discovery, identity exchange, compliance checks, authorization, and settlement across all parties.
+An invoice payment is a **pull payment**: a merchant (or their PIA) requests payment, and the customer pays using their wallet or account through their PRA. Flow coordinates discovery, identity exchange, compliance checks, authorization, and settlement across all parties.
 
 ### Roles
 
@@ -52,13 +54,13 @@ A pay-in is a **pull payment**: a merchant (or their PIA) requests payment, and 
 | IP   | Infrastructure Provider  | Supporting services  | Custody platforms, MPC wallets, liquidity providers |
 
 **PIA responsibilities:**
-- Create pay-in requests on behalf of merchants
+- Create invoice payment requests on behalf of merchants
 - Specify accepted assets and settlement addresses
 - Distribute payment links
 - Reconcile incoming funds
 
 **PRA responsibilities:**
-- Receive pay-in requests and surface them to payers
+- Receive invoice payment requests and surface them to payers
 - Provide an authorization URL for customer approval (or auto-authorize)
 - Authorize or reject transfers based on compliance checks
 - Execute or coordinate settlement via IPs once authorized
@@ -90,7 +92,7 @@ POST https://auth.notabene.id/oauth/token
 
 ### Model Your Customers
 
-Before creating pay-ins, register your customers (merchants for PIAs, payers for PRAs):
+Before creating invoice payments, register your customers (merchants for PIAs, payers for PRAs):
 
 ```
 POST /entities/{entityDID}/flow/customers
@@ -149,11 +151,11 @@ DELETE /entities/{entityDID}/flow/customers/{customerDID}
 
 ### Supported Assets & Fallback Settlement Addresses
 
-**Supported assets** define which payment methods a PIA accepts for a pay-in. Each entry is a [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-19.md) token identifier. We recommend listing stablecoins denominated in the same currency as the invoice amount (e.g., USDC and USDT for a USD invoice) across the chains you support.
+**Supported assets** define which payment methods a PIA accepts for an invoice payment. Each entry is a [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-19.md) token identifier. We recommend listing stablecoins denominated in the same currency as the invoice amount (e.g., USDC and USDT for a USD invoice) across the chains you support.
 
 **Fallback settlement addresses** are the PIA's receiving addresses — one per blockchain for each supported asset. These are specified as CAIP-10 account identifiers. We recommend that PIAs provide a `fallbackSettlementAddresses` entry for each chain they list in `supportedAssets`, so the system can automatically match the settlement address when the PRA selects an asset. You or your customer can also add bank account details as PayTo URIs (e.g., `payto://iban/DE89370400440532013000`) as a backup for customers who prefer fiat settlement. Customers paying through fiat fallback addresses are not charged through the Flow system — these are provided as a convenience mechanism.
 
-Pre-registering wallet addresses in the Wallet Service is **not required** for Flow. The `fallbackSettlementAddresses` on the pay-in (or at entity level) are sufficient.
+Pre-registering wallet addresses in the Wallet Service is **not required** for Flow. The `fallbackSettlementAddresses` on the invoice payment (or at entity level) are sufficient.
 
 The **PRA** selects one of the `supportedAssets` on behalf of the payer, depending on what the customer has available or by helping them onramp to one of the supported tokens.
 
@@ -165,7 +167,7 @@ Subscribe to Flow webhook events in the Notabene dashboard. See [Webhook Event R
 
 Both PIAs and PRAs can add a supported **wallet service (Infrastructure Provider / IP)** as an agent to handle all blockchain settlement on their behalf. This lets you focus on the payment and compliance aspects without managing wallets, on-chain transfers, or settlement addresses.
 
-The IP handles: wallet provisioning, asset selection, settlement address management, on-chain execution, and settlement reporting. You handle: creating pay-ins, distributing payment links, authorization decisions, and reconciliation.
+The IP handles: wallet provisioning, asset selection, settlement address management, on-chain execution, and settlement reporting. You handle: creating invoice payments, distributing payment links, authorization decisions, and reconciliation.
 
 See [Infrastructure Provider Flow](#infrastructure-provider-flow-ip) for how IPs are added, and the [Wallet Service Integration Guide](./wallet-service-guide.md) for the full IP perspective.
 
@@ -173,7 +175,7 @@ See [Infrastructure Provider Flow](#infrastructure-provider-flow-ip) for how IPs
 
 ## Initiator Flow (PIA)
 
-### Step 1: Create a Pay-in
+### Step 1: Create an Invoice Payment
 
 ```
 POST /entities/{entityDID}/flow/customers/{merchantCustomerDID}/payins
@@ -218,7 +220,7 @@ Content-Type: application/json
 | `customer`        | object   | Yes      | Payer identity (`@id` required, 3–255 chars; optional `name`, `email`)  |
 | `memo`            | string   | No       | Payment description                               |
 
-> **Entity-level pay-in** (`POST /entities/{entityDID}/flow/payins`): When creating a pay-in at entity level (without a customer path param), the `merchant` object, `supportedAssets`, and `fallbackSettlementAddresses` fields are all **required** in addition to the fields above.
+> **Entity-level invoice payment** (`POST /entities/{entityDID}/flow/payins`): When creating an invoice payment at entity level (without a customer path param), the `merchant` object, `supportedAssets`, and `fallbackSettlementAddresses` fields are all **required** in addition to the fields above.
 
 **Supported assets** list the CAIP-19 tokens you accept. We recommend stablecoins denominated in the invoice currency (e.g., USDC on Ethereum and Polygon for a USD invoice). The PRA selects one of these on behalf of the payer — depending on what the customer has available or by helping them onramp to a supported token.
 
@@ -242,9 +244,9 @@ Send the `paymentLink` from the response to the payer via your preferred channel
 
 ### Step 3: Monitor Progress via Webhooks
 
-Track the pay-in lifecycle through webhook events:
+Track the invoice payment lifecycle through webhook events:
 
-1. **`flow.payin.created`** - Pay-in created (confirmation)
+1. **`flow.payin.created`** - Invoice payment created (confirmation)
 2. **`flow.payin.opened`** - Customer opened the payment link
 3. **`flow.payin.assetSelected`** - Customer selected a payment asset
 4. **`flow.payin.agentAdded`** - PRA or IP agent joined the transfer
@@ -293,11 +295,11 @@ Authorization: Bearer <token>
 
 ## Responder Flow (PRA)
 
-As a PRA, you receive pay-in requests and manage the payer's side of the transaction.
+As a PRA, you receive invoice payment requests and manage the payer's side of the transaction.
 
-### Step 1: Receive the Pay-in Request
+### Step 1: Receive the Invoice Payment Request
 
-When a PIA creates a pay-in that involves your customer, you receive the **`flow.payin.created`** webhook (or `flow.payout.created` depending on direction):
+When a PIA creates an invoice payment that involves your customer, you receive the **`flow.payin.created`** webhook (or `flow.payout.created` depending on direction):
 
 ```json
 {
@@ -321,7 +323,7 @@ When a PIA creates a pay-in that involves your customer, you receive the **`flow
 
 > **Webhook format:** All Notabene webhooks use the same envelope: `message` contains the event type, `payload` contains all event-specific data (including the transfer `id`), and `version` is always `"1.0.0"`. See [Webhook Payload Structure](./guide-travel-rule-api.md#webhook-payload-structure) for details.
 
-You can also poll for pay-ins:
+You can also poll for invoice payments:
 
 ```
 GET /entities/{entityDID}/flow/payins
@@ -337,7 +339,7 @@ Authorization: Bearer <token>
 
 **As a PRA, your workflow is:**
 
-1. Receive the pay-in request via webhook or API
+1. Receive the invoice payment request via webhook or API
 2. Provide an authorization URL so the customer can approve the payment (or skip this to auto-authorize)
 3. Select the payment asset (asset only, no address)
 4. Wait for the PIA's settlement address, then authorize or reject the transfer
@@ -379,7 +381,7 @@ If your system auto-authorizes payments (e.g., for pre-approved connections or l
 
 ### Step 3: Select Asset
 
-The PRA selects one of the `supportedAssets` from the pay-in request on behalf of the payer. This is done via a separate asset selection endpoint — **not** as part of the authorize call.
+The PRA selects one of the `supportedAssets` from the invoice payment request on behalf of the payer. This is done via a separate asset selection endpoint — **not** as part of the authorize call.
 
 ```
 POST /entities/{entityDID}/flow/payouts/{transferId}/settlement_asset
@@ -454,11 +456,11 @@ The `settlementId` is the blockchain transaction hash or bank reference confirmi
 
 ## Infrastructure Provider Flow (IP)
 
-Infrastructure Providers such as wallet custody platforms, MPC wallet services, or liquidity providers handle the blockchain settlement aspect of a Flow pay-in on behalf of a PIA or PRA. The IP does not own the customer relationship — it acts as a settlement agent under instruction from its client.
+Infrastructure Providers such as wallet custody platforms, MPC wallet services, or liquidity providers handle the blockchain settlement aspect of a Flow invoice payment on behalf of a PIA or PRA. The IP does not own the customer relationship — it acts as a settlement agent under instruction from its client.
 
 ### How IPs Are Added
 
-**By the PIA at creation time:** The PIA typically includes the IP as an agent when creating the pay-in. This is common when the merchant's custody provider will receive the settled funds:
+**By the PIA at creation time:** The PIA typically includes the IP as an agent when creating the invoice payment. This is common when the merchant's custody provider will receive the settled funds:
 
 ```json
 {
@@ -473,7 +475,7 @@ Infrastructure Providers such as wallet custody platforms, MPC wallet services, 
     {
       "@id": "did:web:custody-provider.com",
       "for": "did:web:pia-entity.com",
-      "role": "IP"
+      "role": "Custodian"
     }
   ]
 }
@@ -492,7 +494,7 @@ Content-Type: application/json
   "agent": {
     "@id": "did:web:wallet-provider.com",
     "for": "did:web:pra-entity.com",
-    "role": "IP"
+    "role": "Custodian"
   }
 }
 ```
@@ -569,7 +571,7 @@ PIA (Merchant side)                       PRA (Payer side)
 
 | Event                                  | When                                          | What to Do                                      |
 | -------------------------------------- | --------------------------------------------- | ----------------------------------------------- |
-| `flow.payin.created`                   | Pay-in request created                        | Confirm creation in your system                 |
+| `flow.payin.created`                   | Invoice payment request created               | Confirm creation in your system                 |
 | `flow.payin.opened`                    | Customer opened payment link                  | Track customer engagement                       |
 | `flow.payin.assetSelected`             | Customer selected payment asset               | Track payment progress                          |
 | `flow.payin.authorizationRequired`     | PRA provided an authorization URL             | Direct customer to the PRA's authorization page |
@@ -580,7 +582,7 @@ PIA (Merchant side)                       PRA (Payer side)
 
 | Event                                  | When                                          | What to Do                                      |
 | -------------------------------------- | --------------------------------------------- | ----------------------------------------------- |
-| `flow.payin.created`                   | Pay-in request received from PIA              | Surface to payer for approval                   |
+| `flow.payin.created`                   | Invoice payment request received from PIA     | Surface to payer for approval                   |
 | `flow.payin.agentAdded`               | Your agent was added to the transfer          | Confirm agent assignment                        |
 | `flow.payin.settlementAddressSelected`             | PIA provided settlement address for funds     | Call `/authorize`, then send funds to this address |
 | `notification.transferStatusChanged`   | Transfer status changed (e.g., `AUTHORIZED`)  | Call `/settle` when `toStatus: "AUTHORIZED"`    |

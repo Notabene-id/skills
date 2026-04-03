@@ -177,7 +177,7 @@ When creating a transfer, add the wallet service as an agent acting on your beha
     },
     {
       "@id": "did:web:wallet-service.com",
-      "role": "IP",
+      "role": "Custodian",
       "for": "did:web:your-vasp.com"
     }
   ]
@@ -292,7 +292,7 @@ After creation, the system automatically:
 | `ref`         | 1–64 chars, pattern: `^[a-zA-Z0-9_-]{1,64}$` | Idempotency key for deduplication                     |
 | `memoTag`     | 1–28 chars, printable ASCII only              | Optional memo/destination tag (e.g., XRP, XLM)        |
 
-> **Note on agent roles:** The Notabene API uses simplified role values (`VASP`, `SourceAddress`, `SettlementAddress`) that differ from the underlying TAP protocol roles (`OriginatorVASP`, `BeneficiaryVASP`, etc. — see TAIP-5). The API maps these internally. Always use the Notabene role values shown in this guide when calling Notabene endpoints.
+> **Note on agent roles:** The valid agent role values are `VASP`, `Custodian`, `SettlementAddress`, `SourceAddress`, and `Gateway`. These differ from the underlying TAP protocol roles (`OriginatorVASP`, `BeneficiaryVASP`, etc. — see TAIP-5). The API maps these internally. Always use the Notabene role values shown in this guide when calling Notabene endpoints.
 
 ### 2. Provide PII When Requested
 

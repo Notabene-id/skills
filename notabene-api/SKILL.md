@@ -4,7 +4,7 @@ description: >
   Notabene API integration guide for developers and coding agents. Use when building an
   integration with Notabene, writing code against Notabene APIs, debugging an integration,
   or asking how Notabene works technically. Triggers on: "Notabene API", "Travel Rule API",
-  "Flow API", "pay-in", "VASP integration", "originator", "beneficiary VASP", "PIA", "PRA",
+  "Flow API", "pay-in", "invoice payment", "VASP integration", "originator", "beneficiary VASP", "PIA", "PRA",
   "infrastructure provider", "notabene webhook", "authorize transfer", "settle transfer",
   "append PII", "IVMS101", "entityDID", "notabene auth token", "SafeConnect",
   "WithdrawalAssist", "DepositAssist", "DepositRequest", "ConnectWallet", "customer token",
@@ -26,11 +26,11 @@ Notabene provides two primary APIs. Read the relevant guide(s) before writing an
 | Use Case | Guide |
 |---|---|
 | Travel Rule compliance (VASP-to-VASP PII exchange, outgoing/incoming crypto transfers) | [guide-travel-rule-api.md](./references/guide-travel-rule-api.md) |
-| Flow pay-ins (stablecoin/fiat pull payments with merchant invoicing, payment links) | [guide-flow-payins-api.md](./references/guide-flow-payins-api.md) |
+| Flow invoice payments (stablecoin/fiat pull payments with merchant invoicing, payment links) | [guide-flow-payins-api.md](./references/guide-flow-payins-api.md) |
 | Wallet service / custody provider acting as an Infrastructure Provider (IP) in Flow or Transact | [wallet-service-guide.md](./references/wallet-service-guide.md) |
 | Embedding Travel Rule UI in your frontend (withdrawal screen, deposit screen, wallet verification) | [guide-javascript-sdk.md](./references/guide-javascript-sdk.md) |
 
-If you're unsure: **Travel Rule** = you are a VASP moving customer funds between blockchain addresses and need to comply with FATF regulations. **Flow** = you are building a payment product where a merchant requests money from a customer. **Wallet Service / IP** = you are a custody or wallet provider that handles on-chain operations on behalf of another institution in Flow or Transact transactions. **JavaScript SDK** = you need a UI component that collects Travel Rule data from your users inside your web app.
+If you're unsure: **Travel Rule** = you are a VASP moving customer funds between blockchain addresses and need to comply with FATF regulations. **Flow** = you are building an invoice payment product where a merchant requests money from a customer. **Wallet Service / IP** = you are a custody or wallet provider that handles on-chain operations on behalf of another institution in Flow or Transact transactions. **JavaScript SDK** = you need a UI component that collects Travel Rule data from your users inside your web app.
 
 > **Flow and Travel Rule:** Flow transactions automatically feed into Notabene's Travel Rule compliance workflows. If your primary use case is payment flows via Flow, you do **not** need to separately integrate the Travel Rule API — compliance is handled for you as part of the Flow protocol.
 
@@ -133,20 +133,20 @@ Read [`references/guide-travel-rule-api.md`](./references/guide-travel-rule-api.
 
 ---
 
-## Flow Pay-ins API — Quick orientation
+## Flow Invoice Payments API — Quick orientation
 
 Read [`references/guide-flow-payins-api.md`](./references/guide-flow-payins-api.md) for the complete guide.
 
 > **Travel Rule compliance is automatic.** Flow transactions are built on TAP and automatically feed into Notabene's Travel Rule compliance workflows. If you are primarily focused on payment flows, you do not need to separately integrate the Travel Rule API.
 
 **Three roles:**
-- **PIA (Payment Initiating Agent)** — merchant side; creates pay-ins, distributes payment links, reconciles
+- **PIA (Payment Initiating Agent)** — merchant side; creates invoice payments, distributes payment links, reconciles
 - **PRA (Payment Responding Agent)** — payer side; receives requests, surfaces to customer, authorizes, settles
 - **IP (Infrastructure Provider)** — optional; custody/wallet/liquidity layer that handles on-chain settlement
 
 **Core lifecycle (PIA):**
 1. Register merchants: `POST /entities/{entityDID}/flow/customers`
-2. Create pay-in: `POST /entities/{entityDID}/flow/customers/{merchantDID}/payins`
+2. Create invoice payment: `POST /entities/{entityDID}/flow/customers/{merchantDID}/payins`
 3. Send `paymentLink` to customer
 4. Authorize when ready: `POST .../tx/{id}/authorize`
 5. Reconcile on `notification.transferStatusChanged` → `SETTLED`
@@ -237,7 +237,7 @@ The SDK provides embeddable **SafeConnect** components that handle Travel Rule d
 - **Full API reference (web)**: [devx.notabene.id/reference](https://devx.notabene.id/reference)
 - **SafeConnect components docs**: [devx.notabene.id/docs/components-overview](https://devx.notabene.id/docs/components-overview)
 - **Travel Rule guide**: [`references/guide-travel-rule-api.md`](./references/guide-travel-rule-api.md)
-- **Flow Pay-ins guide**: [`references/guide-flow-payins-api.md`](./references/guide-flow-payins-api.md)
+- **Flow Invoice Payments guide**: [`references/guide-flow-payins-api.md`](./references/guide-flow-payins-api.md)
 - **Wallet Service / IP guide**: [`references/wallet-service-guide.md`](./references/wallet-service-guide.md)
 - **Webhooks guide**: [`references/webhooks.md`](./references/webhooks.md)
 - **JavaScript SDK guide**: [`references/guide-javascript-sdk.md`](./references/guide-javascript-sdk.md)

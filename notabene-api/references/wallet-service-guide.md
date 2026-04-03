@@ -44,7 +44,7 @@ When your customer initiates a withdrawal or send through your wallet API:
     },
     {
       "@id": "did:web:your-wallet-service.com",
-      "role": "IP",
+      "role": "Custodian",
       "for": "did:web:your-customer-vasp.com"
     }
   ]
@@ -64,9 +64,9 @@ When your customer initiates a withdrawal or send through your wallet API:
 
 ---
 
-## Offering Billing / Pay-in APIs to Your Customers
+## Offering Invoice Payment APIs to Your Customers
 
-You can also wrap Notabene's **Flow Pay-ins API** to offer billing and invoicing capabilities to your customers. Your customers (merchants, SaaS platforms) get compliant payment collection without building a direct Flow integration.
+You can also wrap Notabene's **Flow Invoice Payments API** to offer billing and invoicing capabilities to your customers. Your customers (merchants, SaaS platforms) get compliant payment collection without building a direct Flow integration.
 
 ### How it works
 
@@ -78,7 +78,7 @@ When your customer wants to create an invoice or payment request:
 POST /entities/{entityDID}/flow/customers
 ```
 
-2. **Create pay-ins on their behalf** using `POST /entities/{entityDID}/flow/customers/{customerDID}/payins`, adding yourself as an agent acting on behalf of the PIA (your customer):
+2. **Create invoice payments on their behalf** using `POST /entities/{entityDID}/flow/customers/{customerDID}/payins`, adding yourself as an agent acting on behalf of the PIA (your customer):
 
 ```json
 {
@@ -95,7 +95,7 @@ POST /entities/{entityDID}/flow/customers
     {
       "@id": "did:web:your-wallet-service.com",
       "for": "did:web:your-customer-merchant.com",
-      "role": "IP"
+      "role": "Custodian"
     }
   ]
 }

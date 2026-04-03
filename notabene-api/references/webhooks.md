@@ -230,7 +230,7 @@ try {
     "agent": {
       "id": "agent-789",
       "for": "did:web:intermediary.com",
-      "role": "originator"
+      "role": "VASP"
     }
   },
   "version": "1.0.0"
@@ -251,7 +251,7 @@ try {
 
 **Response Required**: None (informational only).
 
-**Agent Roles**: `originator`, `beneficiary`, `intermediary`
+**Agent Roles**: `VASP`, `Custodian`, `SettlementAddress`, `SourceAddress`, `Gateway`
 
 ---
 
@@ -276,7 +276,7 @@ try {
     "toAgent": {
       "id": "new-agent-456",
       "for": "did:web:new-intermediary.com",
-      "role": "originator"
+      "role": "VASP"
     }
   },
   "version": "1.0.0"
@@ -851,7 +851,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
     "agent": {
       "id": "agent-789",
       "for": "did:web:wallet.com",
-      "role": "beneficiary"
+      "role": "VASP"
     },
     "customerDid": "did:email:customer@example.com",
     "merchantDid": "did:web:merchant.com"
