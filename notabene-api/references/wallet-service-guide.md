@@ -31,15 +31,15 @@ When your customer initiates a withdrawal or send through your wallet API:
 ```json
 {
   "ref": "withdrawal-001",
-  "originator": { "@id": "did:email:end-user@example.com" },
-  "beneficiary": { "@id": "did:email:recipient@example.com" },
+  "originator": { "@id": "mailto:end-user@example.com" },
+  "beneficiary": { "@id": "mailto:recipient@example.com" },
   "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "amount": "100.00",
   "agents": [
     {
       "@id": "did:web:your-customer-vasp.com",
       "role": "VASP",
-      "for": "did:email:end-user@example.com",
+      "for": "mailto:end-user@example.com",
       "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }]
     },
     {
@@ -89,7 +89,7 @@ POST /entities/{entityDID}/flow/customers
     "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
   ],
   "customer": {
-    "@id": "did:email:payer@example.com"
+    "@id": "mailto:payer@example.com"
   },
   "agents": [
     {
@@ -179,10 +179,10 @@ Your role depends on which side of the transaction your client is on. The transf
 {
   "agents": [
     { "agent": { "@id": "did:web:your-service" }, "for": "did:web:client-vasp" },
-    { "agent": { "@id": "did:web:client-vasp" }, "for": "did:email:originator@example.com" }
+    { "agent": { "@id": "did:web:client-vasp" }, "for": "mailto:originator@example.com" }
   ],
-  "originator": { "@id": "did:email:originator@example.com" },
-  "beneficiary": { "@id": "did:email:beneficiary@example.com" }
+  "originator": { "@id": "mailto:originator@example.com" },
+  "beneficiary": { "@id": "mailto:beneficiary@example.com" }
 }
 ```
 
@@ -473,8 +473,8 @@ Key fields on the transfer object:
   "agents": [
     { "agent": { "@id": "did:web:..." }, "for": "did:web:..." }
   ],
-  "originator": { "@id": "did:email:..." },
-  "beneficiary": { "@id": "did:email:..." }
+  "originator": { "@id": "mailto:..." },
+  "beneficiary": { "@id": "mailto:..." }
 }
 ```
 

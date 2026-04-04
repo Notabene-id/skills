@@ -365,15 +365,15 @@ Create a new transfer. This is the entry point for initiating Travel Rule compli
 ```json
 {
   "ref": "a7135b55-0822-4e96-86dc-3c43dfc6c333",
-  "originator": { "@id": "did:email:user@example.com" },
-  "beneficiary": { "@id": "did:email:recipient@example.com" },
+  "originator": { "@id": "mailto:user@example.com" },
+  "beneficiary": { "@id": "mailto:recipient@example.com" },
   "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "amount": "100.00",
   "agents": [
     {
       "@id": "did:web:your-vasp.com",
       "role": "VASP",
-      "for": "did:email:user@example.com",
+      "for": "mailto:user@example.com",
       "policies": [
         { "@type": "REQUIRE_AUTHORIZATION" }
       ]
@@ -615,7 +615,7 @@ Add an agent to an existing transfer.
   "agent": {
     "@id": "did:web:new-agent.com",
     "role": "VASP",
-    "for": "did:email:user@example.com",
+    "for": "mailto:user@example.com",
     "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }],
     "memoTag": "12345"
   }
@@ -638,7 +638,7 @@ Replace an existing agent with a new agent. Caller must be the transfer initiato
   "replacement": {
     "@id": "did:web:new-agent.com",
     "role": "VASP",
-    "for": "did:email:user@example.com"
+    "for": "mailto:user@example.com"
   }
 }
 ```
@@ -736,8 +736,8 @@ Append PII (IVMS101 data) to a transfer for Travel Rule compliance.
 
 ```json
 {
-  "originator": { "@id": "did:email:originator@notabene.id" },
-  "beneficiary": { "@id": "did:email:beneficiary@notabene.id" },
+  "originator": { "@id": "mailto:originator@notabene.id" },
+  "beneficiary": { "@id": "mailto:beneficiary@notabene.id" },
   "ivms101": {
     "originator": {
       "originatorPerson": [{
@@ -812,7 +812,7 @@ Create a new customer for Flow workflows. PII is encrypted before storage.
 
 ```json
 {
-  "customerDid": "did:email:customer@example.com",
+  "customerDid": "mailto:customer@example.com",
   "customerType": "natural_person",
   "profileData": {
     "naturalPerson": {
@@ -905,7 +905,7 @@ Create a pay-in for a specific customer (merchant).
   "currency": "USD",
   "amount": "1000.00",
   "customer": {
-    "@id": "did:email:payer@example.com",
+    "@id": "mailto:payer@example.com",
     "name": "John Payer",
     "email": "payer@example.com"
   },
@@ -949,9 +949,9 @@ Create a pay-in for a specific customer (merchant).
     "amount": "1000.00",
     "status": "...",
     "flowState": "...",
-    "paymentLink": "https://connect.notabene.id/payin/<token>",
-    "customerDid": "did:email:payer@example.com",
-    "merchantDid": "did:email:merchant@example.com",
+    "paymentLink": "https://flow.link/payin/<token>",
+    "customerDid": "mailto:payer@example.com",
+    "merchantDid": "mailto:merchant@example.com",
     "createdAt": "2025-01-15T10:00:00.000Z"
   }
 }
@@ -970,7 +970,7 @@ Create a pay-in at entity level (not scoped to a customer).
 ```json
 {
   "merchant": { "@id": "did:web:merchant.com", "name": "Merchant", "email": "merchant@example.com" },
-  "customer": { "@id": "did:email:payer@example.com" },
+  "customer": { "@id": "mailto:payer@example.com" },
   "supportedAssets": ["..."],
   "fallbackSettlementAddresses": ["..."],
   ...
@@ -1159,7 +1159,7 @@ Send customer signals to Flow payment workflows (wallet selection, payment appro
 {
   "action": "wallet_selected",
   "data": {
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "walletAddress": "eip155:1:0x...",
     "walletDid": "did:web:wallet-provider.com",
     "selectedAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -1202,7 +1202,7 @@ Add an agent to a Flow payment workflow.
 {
   "agent": {
     "@id": "did:web:wallet-provider.com",
-    "for": "did:email:customer@example.com"
+    "for": "mailto:customer@example.com"
   },
   "selectedAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 }
@@ -1245,7 +1245,7 @@ Set funding address for a Flow transfer (used by onramp/IP agents).
 {
   "amount": "100.00",
   "currency": "USD",
-  "for": "did:example:customer",
+  "for": "mailto:customer@example.com",
   "fundingAddress": "eip155:1:0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
   "fundingAccount": "payto://iban/DE75512108001245126199",
   "fee": "1.5"
@@ -1271,7 +1271,7 @@ Set funding address for a Flow transfer (used by onramp/IP agents).
     "amount": "100.00",
     "currency": "USD",
     "fundingAddress": "eip155:1:0x...",
-    "for": "did:example:customer",
+    "for": "mailto:customer@example.com",
     "addedBy": "did:web:onramp.com",
     "addedAt": "2025-01-15T10:00:00.000Z"
   }

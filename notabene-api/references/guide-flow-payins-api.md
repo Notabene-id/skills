@@ -199,7 +199,7 @@ Content-Type: application/json
     "payto://iban/DE89370400440532013000"
   ],
   "customer": {
-    "@id": "did:email:customer@example.com",
+    "@id": "mailto:customer@example.com",
     "name": "Test Customer",
     "email": "customer@example.com"
   },
@@ -309,7 +309,7 @@ When a PIA creates an invoice payment that involves your customer, you receive t
     "for": "did:web:your-pra.com",
     "initiatedBy": "did:web:pia-payments.com",
     "transactionType": "PAYIN",
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com",
     "paymentLink": "https://connect.notabene.id/payin/<token>",
     "amount": "1000.00",
@@ -470,7 +470,7 @@ Infrastructure Providers such as wallet custody platforms, MPC wallet services, 
   "currency": "USD",
   "supportedAssets": ["eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"],
   "customer": {
-    "@id": "did:email:customer@example.com"
+    "@id": "mailto:customer@example.com"
   },
   "agents": [
     {

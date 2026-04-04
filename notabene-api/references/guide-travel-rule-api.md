@@ -165,15 +165,15 @@ When creating a transfer, add the wallet service as an agent acting on your beha
 ```json
 {
   "ref": "withdrawal-001",
-  "originator": { "@id": "did:email:customer@example.com" },
-  "beneficiary": { "@id": "did:email:recipient@example.com" },
+  "originator": { "@id": "mailto:customer@example.com" },
+  "beneficiary": { "@id": "mailto:recipient@example.com" },
   "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "amount": "100.00",
   "agents": [
     {
       "@id": "did:web:your-vasp.com",
       "role": "VASP",
-      "for": "did:email:customer@example.com",
+      "for": "mailto:customer@example.com",
       "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }]
     },
     {
@@ -212,10 +212,10 @@ Content-Type: application/json
 ```json
 {
   "originator": {
-    "@id": "did:email:sender@example.com"
+    "@id": "mailto:sender@example.com"
   },
   "beneficiary": {
-    "@id": "did:email:receiver@example.com"
+    "@id": "mailto:receiver@example.com"
   },
   "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "amount": "1000",
@@ -227,12 +227,12 @@ Content-Type: application/json
     },
     {
       "@id": "did:web:your-vasp.com",
-      "for": "did:email:sender@example.com",
+      "for": "mailto:sender@example.com",
       "role": "VASP"
     },
     {
       "@id": "did:web:counterparty-vasp.com",
-      "for": "did:email:receiver@example.com",
+      "for": "mailto:receiver@example.com",
       "role": "VASP"
     },
     {
@@ -249,8 +249,8 @@ Content-Type: application/json
 
 ```json
 {
-  "originator": { "@id": "did:email:sender@example.com" },
-  "beneficiary": { "@id": "did:email:receiver@example.com" },
+  "originator": { "@id": "mailto:sender@example.com" },
+  "beneficiary": { "@id": "mailto:receiver@example.com" },
   "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "amount": "1000",
   "agents": [
@@ -261,12 +261,12 @@ Content-Type: application/json
     },
     {
       "@id": "did:web:your-vasp.com",
-      "for": "did:email:sender@example.com",
+      "for": "mailto:sender@example.com",
       "role": "VASP"
     },
     {
       "@id": "did:pkh:eip155:1:0xSettlementAddress",
-      "for": "did:email:receiver@example.com",
+      "for": "mailto:receiver@example.com",
       "role": "SettlementAddress"
     }
   ],
@@ -327,10 +327,10 @@ Content-Type: application/json
 ```json
 {
   "originator": {
-    "@id": "did:email:sender@example.com"
+    "@id": "mailto:sender@example.com"
   },
   "beneficiary": {
-    "@id": "did:email:receiver@example.com"
+    "@id": "mailto:receiver@example.com"
   },
   "ivms101": {
     "originator": {
@@ -505,14 +505,14 @@ Content-Type: application/json
 {
   "ref": "your-unique-deposit-reference",
   "originator": { "@id": "did:pkh:eip155:1:0xSenderAddress" },
-  "beneficiary": { "@id": "did:email:your-customer@example.com" },
+  "beneficiary": { "@id": "mailto:your-customer@example.com" },
   "asset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "amount": "100.00",
   "agents": [
     {
       "@id": "did:web:your-vasp.com",
       "role": "VASP",
-      "for": "did:email:your-customer@example.com",
+      "for": "mailto:your-customer@example.com",
       "policies": [{ "@type": "REQUIRE_AUTHORIZATION" }]
     }
   ],

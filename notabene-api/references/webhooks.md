@@ -688,10 +688,10 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
     "initiatedBy": "did:web:pia-payments.com",
     "id": "transfer-123",
     "transactionType": "PAYIN",
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com",
     "customer": {
-      "@id": "did:email:customer@example.com",
+      "@id": "mailto:customer@example.com",
       "name": "John Doe",
       "email": "customer@example.com"
     },
@@ -767,7 +767,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
     "for": "did:web:example.com",
     "id": "transfer-123",
     "transactionType": "PAYOUT",
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com"
   },
   "version": "1.0.0"
@@ -807,7 +807,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
     "transactionType": "PAYIN",
     "selectedAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     "selectedSettlementAddress": "0x742d35Cc6634C0532925a3b8D16e3E7B9F4F1234",
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com"
   },
   "version": "1.0.0"
@@ -853,7 +853,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
       "for": "did:web:wallet.com",
       "role": "VASP"
     },
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com"
   },
   "version": "1.0.0"
@@ -898,7 +898,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
     "transactionType": "PAYIN",
     "settlementAddress": "0x742d35Cc6634C0532925a3b8D16e3E7B9F4F1234",
     "selectedAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com"
   },
   "version": "1.0.0"
@@ -938,7 +938,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
     "for": "did:web:example.com",
     "id": "transfer-123",
     "transactionType": "PAYOUT",
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com",
     "authorizationUrl": "https://api.notabene.id/v1/flow/authorize/abc123",
     "purpose": "High-value payout requires approval"
@@ -980,7 +980,7 @@ Flow events are sent for Notabene Flow payment processing workflows. Events are 
     "for": "did:web:example.com",
     "id": "transfer-123",
     "transactionType": "PAYIN",
-    "customerDid": "did:email:customer@example.com",
+    "customerDid": "mailto:customer@example.com",
     "merchantDid": "did:web:merchant.com",
     "fundingAddress": {
       "amount": "500.00",

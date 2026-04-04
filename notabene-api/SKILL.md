@@ -100,7 +100,7 @@ Dashboard: `https://app.eu1.notabene.id/`
 
 **DIDs (Decentralized Identifiers)** — Notabene identifies every actor with a DID:
 - Your entity: `did:web:your-domain.com` (configured in dashboard)
-- Customers: `did:email:user@example.com` or `did:pkh:eip155:1:0xAddress`
+- Customers: `mailto:user@example.com` or `did:pkh:eip155:1:0xAddress`
 - Blockchain addresses: `did:pkh:eip155:<chainId>:<address>`
 
 **CAIP-19** — Asset identifiers used throughout both APIs:
