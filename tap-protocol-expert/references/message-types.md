@@ -33,19 +33,29 @@ All TAP message types with full field specifications. Every message body is wrap
 
   // Asset and amount
   asset: string,        // Required. CAIP-19 asset identifier
-  amount: string,       // Required. Decimal string (e.g., "100.00")
+  amount?: string,      // Required for fungible tokens; optional for NFTs. Decimal string (e.g., "100.00")
 
-  // Parties
-  originator: Party,    // Required. TAIP-6 Party object (sender)
-  beneficiary: Party,   // Required. TAIP-6 Party object (receiver)
+  // Parties (both optional in spec; convention is to include them)
+  originator?: Party,   // TAIP-6 Party object (sender)
+  beneficiary?: Party,  // TAIP-6 Party object (receiver)
 
   // Agents
-  agents: Agent[],      // Required. TAIP-5 Agent objects
+  agents: Agent[],      // Required. TAIP-5 Agent objects. At least one MUST match
+                        // the DIDComm `from` and have `for` set to the originator
+                        // or beneficiary DID
 
   // Optional
   settlementId?: string,  // CAIP-220 blockchain tx ID (if already settled)
   memo?: string,          // Free-text note
   expiry?: string,        // ISO 8601 datetime
+
+  // Fiat-equivalent value (added 2025-08-21) — useful for Travel Rule threshold
+  // determination when the asset is not widely traded and receiving agents
+  // cannot easily resolve fiat value
+  transactionValue?: {
+    amount: string,    // Required. Decimal string of fiat amount
+    currency: string,  // Required. ISO 4217 3-letter code ("USD", "EUR", ...)
+  },
 
   // TAIP-13 additions
   purpose?: string,       // ISO 20022 ExternalPurpose1Code (e.g., "SALA")
@@ -391,16 +401,18 @@ Not a standalone message — embedded as `invoice` field in TAIP-14 Payment.
 
 ---
 
-## TAIP-17: Escrow Messages
+## TAIP-17: Composable Escrow Messages
 
-### Escrow
+> **Renamed 2026-05-01:** the message type formerly called `Escrow` is now `Lock`. The TAIP title remains "Composable Escrow" and the agent role remains `EscrowAgent`.
 
-**Type:** `https://tap.rsvp/schema/1.0#Escrow`
+### Lock
+
+**Type:** `https://tap.rsvp/schema/1.0#Lock`
 
 ```typescript
 {
   "@context": "https://tap.rsvp/schema/1.0",
-  "@type": "https://tap.rsvp/schema/1.0#Escrow",
+  "@type": "https://tap.rsvp/schema/1.0#Lock",
 
   // One of these is required:
   asset?: string,    // CAIP-19
@@ -409,7 +421,7 @@ Not a standalone message — embedded as `invoice` field in TAIP-14 Payment.
   amount: string,    // Required. Decimal string
   expiry: string,    // Required. ISO 8601 — escrow always expires
 
-  originator: Party,  // Required. TAIP-6 Party (depositor)
+  originator: Party,  // Required. TAIP-6 Party (depositor — funds will come from here)
   beneficiary: Party, // Required. TAIP-6 Party (recipient on capture)
 
   agreement?: string, // URL to escrow terms
@@ -426,37 +438,43 @@ Not a standalone message — embedded as `invoice` field in TAIP-14 Payment.
 {
   "@context": "https://tap.rsvp/schema/1.0",
   "@type": "https://tap.rsvp/schema/1.0#Capture",
+  // thid links to the original Lock message
 
-  amount?: string,           // Decimal string (≤ original escrow; omit = full amount)
-  settlementAddress?: string, // CAIP-10 address for funds release
+  amount?: string,           // Decimal string (≤ original lock; omit = full amount)
+  settlementAddress?: string, // CAIP-10 address for funds release (omit = use earlier Authorize address)
 }
 ```
 
+State transitions reuse `Authorize`, `Settle`, `Cancel`, `Reject`, `Revert` from TAIP-4. See `taip-catalog.md` for the full lifecycle.
+
 ---
 
-## TAIP-18: Exchange Messages
+## TAIP-18: Asset Exchange Messages
 
-### Exchange
+> **Renamed 2026-05-01:** the message type formerly called `Exchange` is now `RFQ` (Request for Quote). The TAIP title remains "Asset Exchange".
 
-**Type:** `https://tap.rsvp/schema/1.0#Exchange`
+### RFQ
+
+**Type:** `https://tap.rsvp/schema/1.0#RFQ`
 
 ```typescript
 {
   "@context": "https://tap.rsvp/schema/1.0",
-  "@type": "https://tap.rsvp/schema/1.0#Exchange",
+  "@type": "https://tap.rsvp/schema/1.0#RFQ",
 
-  fromAssets: string[],  // Required. Array of CAIP-19 / DTI / ISO-4217
-  toAssets: string[],    // Required. Array of CAIP-19 / DTI / ISO-4217
+  fromAssets: string[],  // Required. Array of CAIP-19 / DTI / ISO-4217 (available source assets)
+  toAssets: string[],    // Required. Array of CAIP-19 / DTI / ISO-4217 (desired target assets)
 
   // One of these is required:
   fromAmount?: string,   // Amount to send (decimal string)
   toAmount?: string,     // Amount to receive (decimal string)
 
-  requester: Party,      // Required. TAIP-6 Party making the exchange request
-  provider?: string,     // Optional DID of specific provider (omit to broadcast)
+  requester: Party,      // Required. TAIP-6 Party seeking the exchange
+  provider?: Party,      // Optional. TAIP-6 Party of preferred liquidity provider.
+                         // Omit to broadcast to multiple providers.
 
-  agents?: Agent[],
-  policies?: Policy[],
+  agents: Agent[],       // Required. TAIP-5 agents (per RFQ definition)
+  policies?: Policy[],   // Optional TAIP-7 policies
 }
 ```
 
@@ -468,18 +486,24 @@ Not a standalone message — embedded as `invoice` field in TAIP-14 Payment.
 {
   "@context": "https://tap.rsvp/schema/1.0",
   "@type": "https://tap.rsvp/schema/1.0#Quote",
+  // thid links to the original RFQ message
 
-  fromAsset: string,    // Required. CAIP-19 / DTI / ISO-4217
-  toAsset: string,      // Required. CAIP-19 / DTI / ISO-4217
+  fromAsset: string,    // Required. CAIP-19 / DTI / ISO-4217 (copied from RFQ)
+  toAsset: string,      // Required. CAIP-19 / DTI / ISO-4217 (copied from RFQ)
   fromAmount: string,   // Required. Decimal string
   toAmount: string,     // Required. Decimal string
 
-  provider: string,     // Required. DID of the exchange provider
+  provider: Party,      // Required. TAIP-6 Party of the liquidity provider
 
-  agents?: Agent[],
-  expires?: string,     // ISO 8601 when quote expires
+  agents: Agent[],      // Required. Must include all agents from the original RFQ
+                        // plus any additional provider agents
+  expires: string,      // Required. ISO 8601 when quote expires
 }
 ```
+
+After a Quote, acceptance and settlement reuse TAIP-4:
+- **Accept:** `Authorize` with `thid` = Quote's `id`, plus `settlementAddress`, `settlementAsset` (= `toAsset`), and `amount` (= `toAmount`).
+- **Settle:** `Settle` with `settlementId` (CAIP-220 tx hash) once the swap executes on-chain.
 
 ---
 
@@ -494,3 +518,23 @@ payto://ach/021000021/123456789
 payto://bic/DEUTDEDB
 payto://sortcode/040004/01001234
 ```
+
+---
+
+## TAIP-20: No New Message Types
+
+TAIP-20 is a settlement-layer convention, not a TAP message. It defines a deterministic on-chain memo derived from the TAP transfer ID:
+
+```
+tap_hash = SHA-256(UTF8(tap_transfer_id))
+```
+
+`tap_transfer_id` is one of:
+- `Transfer.id` (TAIP-3)
+- `Payment.id` (TAIP-14)
+- the active settlement-thread `thid`
+
+**Profile A — text memo:** `tap:1:<64-lowercase-hex-of-tap_hash>`
+**Profile B — binary/hash memo:** raw 32-byte `tap_hash`
+
+The memo lives in the chain's native reference field (Stellar memos, Cosmos `TxBody.memo`, Solana memo extensions, Tempo, ARC-style payment APIs, etc.). See `taip-catalog.md` for full encoding rules and verification flow.

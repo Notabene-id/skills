@@ -89,8 +89,8 @@ Every constructor validates required fields, sets `@context` and `@type` automat
 |-------------|------------|------|
 | `NewTransferMessage(from, to, body)` | `TransferBody` | TAIP-3 |
 | `NewPaymentMessage(from, to, body)` | `PaymentBody` | TAIP-14 |
-| `NewExchangeMessage(from, to, body)` | `ExchangeBody` | TAIP-18 |
-| `NewEscrowMessage(from, to, body)` | `EscrowBody` | TAIP-17 |
+| `NewRFQMessage(from, to, body)` | `RFQBody` | TAIP-18 (renamed from `NewExchangeMessage`/`ExchangeBody` 2026-05-01) |
+| `NewLockMessage(from, to, body)` | `LockBody` | TAIP-17 (renamed from `NewEscrowMessage`/`EscrowBody` 2026-05-01) |
 | `NewConnectMessage(from, to, body)` | `ConnectBody` | TAIP-15 |
 
 **Reply messages** (require `thid` for thread correlation):

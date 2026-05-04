@@ -1,4 +1,4 @@
-# TAIP Catalog — All 19 TAIPs
+# TAIP Catalog — All 20 TAIPs
 
 Complete reference for all Transaction Authorization Improvement Proposals.
 
@@ -22,6 +22,7 @@ Complete reference for all Transaction Authorization Improvement Proposals.
 - [TAIP-17: Composable Escrow](#taip-17-composable-escrow)
 - [TAIP-18: Asset Exchange](#taip-18-asset-exchange)
 - [TAIP-19: ISO 20022 Mapping](#taip-19-iso-20022-mapping)
+- [TAIP-20: On-Chain Memo Hash](#taip-20-on-chain-memo-hash)
 
 ---
 
@@ -85,15 +86,24 @@ The foundational TAP message for initiating a blockchain asset transfer.
 | Field | Required | Type | Description |
 |-------|----------|------|-------------|
 | `asset` | Yes | CAIP-19 string | The asset being transferred |
-| `amount` | Yes | Decimal string | Amount in base unit (e.g., "100.00") |
-| `originator` | Yes | TAIP-6 Party | Sender party object |
-| `beneficiary` | Yes | TAIP-6 Party | Receiver party object |
-| `agents` | Yes | TAIP-5 Agent[] | Participating agents |
+| `amount` | Conditional | Decimal string | Required for fungible tokens; optional for NFTs |
+| `originator` | No | TAIP-6 Party | Sender party object |
+| `beneficiary` | No | TAIP-6 Party | Receiver party object |
+| `agents` | Yes | TAIP-5 Agent[] | Participating agents (at least one MUST match the DIDComm `from`) |
 | `settlementId` | No | CAIP-220 | Blockchain tx ID if already settled |
 | `memo` | No | String | Free-text note |
 | `expiry` | No | ISO 8601 datetime | When the transfer request expires |
+| `transactionValue` | No | `{ amount, currency }` | Fiat-equivalent value of the transfer for compliance/Travel Rule threshold determination when the asset is not widely traded. `amount` is a decimal string; `currency` is an ISO 4217 3-letter code. |
 
 **Pattern:** The Transfer message's DIDComm `id` becomes the `thid` for all subsequent messages in the same transaction thread.
+
+**`transactionValue` example:**
+```json
+"transactionValue": {
+  "amount": "12500.00",
+  "currency": "USD"
+}
+```
 
 ---
 
@@ -434,69 +444,91 @@ Adds a structured invoice object to TAIP-14 Payment messages for detailed billin
 ---
 
 ## TAIP-17: Composable Escrow
-**Status:** Draft | **Requires:** TAIP-2, TAIP-3, TAIP-4, TAIP-5, TAIP-6
+**Status:** Review | **Requires:** TAIP-2, TAIP-4, TAIP-5, TAIP-6, TAIP-7
 
-Adds escrow functionality to TAP transactions, enabling conditional or time-locked payments.
+Adds escrow functionality to TAP transactions, enabling conditional or time-locked payments. Reuses existing TAIP-4 messages (`Authorize`, `Settle`, `Cancel`, `Reject`, `Revert`) for state transitions; can optionally use a TAIP-3 Transfer to return cancelled funds.
+
+> **Renamed 2026-05-01:** the message type formerly called `Escrow` is now `Lock`, based on payment-industry feedback. The TAIP title remains "Composable Escrow" and the agent role remains `EscrowAgent`. Old: `https://tap.rsvp/schema/1.0#Escrow` → New: `https://tap.rsvp/schema/1.0#Lock`.
 
 **New message types:**
 
-**`Escrow`** — `https://tap.rsvp/schema/1.0#Escrow`
+**`Lock`** — `https://tap.rsvp/schema/1.0#Lock`
 - Initiates an escrow arrangement
 - `expiry` is **required** (escrow always has a deadline)
 - Must have exactly one agent with `role: "EscrowAgent"`
-- Fields: `asset` or `currency`, `amount`, `originator`, `beneficiary`, `expiry`, `agreement` (URL), `agents`
+- Fields: `asset` (CAIP-19) **or** `currency` (ISO 4217), `amount`, `originator` (Party — depositor), `beneficiary` (Party — recipient on capture), `expiry`, `agreement` (URL, optional), `agents`
 
 **`Capture`** — `https://tap.rsvp/schema/1.0#Capture`
 - Releases escrowed funds to the beneficiary
 - Sent by the beneficiary's agent (any agent with `for` = beneficiary DID)
-- Fields: `amount` (optional, must be ≤ original escrow amount), `settlementAddress` (CAIP-10)
+- `thid` references the original Lock message
+- Fields: `amount` (optional, must be ≤ original lock amount), `settlementAddress` (CAIP-10, optional — falls back to address from earlier Authorize)
 
-**State machine:**
+**Lifecycle:**
 ```
-Requested → (EscrowAgent accepts) → Active → (Capture sent) → Captured
-                                           → (Cancel sent) → Cancelled
-                                           → (expiry reached) → Expired
+[*] → Requested      via Lock
+Requested → Accepted via Authorize from EscrowAgent
+Requested → Rejected via Reject
+Accepted  → Active   via Settle from originator's agent (or internal lock if EscrowAgent acts for originator)
+Active    → Captured via Capture from beneficiary's agent
+Active    → Cancelled via Cancel
+Active    → Expired   automatically when expiry reached
+Captured  → Released  via Settle from EscrowAgent (funds delivered to beneficiary)
 ```
 
-**Use cases:** Payment guarantees, cross-asset atomic swaps (combined with TAIP-18), delivery-on-payment, professional service milestones, platform escrow.
+**Message flow:**
+1. Initiating agent sends `Lock` to all involved agents
+2. EscrowAgent accepts via `Authorize` (with `settlementAddress` if external)
+3. Beneficiary's agent approves via `Authorize` with their `settlementAddress`
+4. Originator's agent sends `Settle` to fund the escrow (if external)
+5. Beneficiary's agent sends `Capture` to release funds (optional partial amount + override `settlementAddress`)
+6. EscrowAgent sends `Settle` to deliver funds to beneficiary
+7. On cancellation, EscrowAgent may use a TAIP-3 `Transfer` to return funds to the originator
+
+**Use cases:** Payment guarantees (credit-card-style auth/capture), cross-asset atomic swaps (combined with TAIP-18), delivery-on-payment, professional service milestones, platform escrow.
 
 ---
 
 ## TAIP-18: Asset Exchange
-**Status:** Draft | **Requires:** TAIP-2, TAIP-3, TAIP-4, TAIP-17
+**Status:** Review | **Requires:** TAIP-2, TAIP-3, TAIP-4, TAIP-5, TAIP-6, TAIP-7, TAIP-8, TAIP-9, TAIP-14, TAIP-17
 
 Enables cross-asset exchange (cryptocurrency swaps, FX conversion, on/off ramps) within the TAP protocol.
 
+> **Renamed 2026-05-01:** the message type formerly called `Exchange` is now `RFQ` (Request for Quote), reflecting standard payment/institutional terminology. The TAIP title remains "Asset Exchange". Old: `https://tap.rsvp/schema/1.0#Exchange` → New: `https://tap.rsvp/schema/1.0#RFQ`.
+
 **New message types:**
 
-**`Exchange`** — `https://tap.rsvp/schema/1.0#Exchange`
-- Initiates an exchange request; can be broadcast to multiple providers for best price
-- Fields: `fromAssets` (array of CAIP-19/DTI/ISO-4217), `toAssets` (array), `fromAmount` OR `toAmount`, `requester` (TAIP-6 Party), `provider` (optional DID), `agents`, `policies`
+**`RFQ`** — `https://tap.rsvp/schema/1.0#RFQ`
+- Initiates a Request for Quote; can be broadcast when `provider` is omitted, or sent to a specific liquidity provider
+- Fields: `fromAssets` (array of CAIP-19/DTI/ISO-4217), `toAssets` (array), `fromAmount` OR `toAmount` (one required), `requester` (TAIP-6 Party), `provider` (optional TAIP-6 Party — preferred liquidity provider), `agents`, `policies`
 
 **`Quote`** — `https://tap.rsvp/schema/1.0#Quote`
 - Provider responds with a price quote
-- Fields: `fromAsset`, `toAsset`, `fromAmount`, `toAmount`, `provider` (DID), `agents`, `expires`
+- `thid` references the original RFQ
+- Fields: `fromAsset`, `toAsset`, `fromAmount`, `toAmount`, `provider` (TAIP-6 Party), `agents` (must include all agents from the RFQ plus any provider agents), `expires` (ISO 8601)
 
 **Flow using TAIP-4:**
-1. Requester broadcasts `Exchange` to multiple providers
+1. Requester broadcasts `RFQ` to multiple providers (or sends to a specific `provider`)
 2. Providers respond with `Quote` messages
-3. Requester accepts best quote via `Authorize` (with `settlementAddress`, `settlementAsset`, `amount`)
-4. Provider settles via `Settle` (with `settlementId`)
+3. Requester accepts best quote via `Authorize` (with `settlementAddress`, `settlementAsset`, `amount`, `thid` linking to Quote)
+4. Provider executes the swap and sends `Settle` (with `settlementId`)
 
-**Combined with TAIP-17 escrow:**
-- Reference the Escrow thread via `pthid` for atomic settlement guarantees
+**Combined with TAIP-17 Lock:**
+- Reference the Lock thread via `pthid` for atomic settlement guarantees
 
-**Asset identifier types supported in Exchange:**
+**Asset identifier types supported in `fromAssets`/`toAssets`:**
 - CAIP-19 (crypto assets)
 - DTI (Digital Token Identifier, ISO 24165)
 - ISO 4217 (fiat currencies)
+
+**Multi-asset RFQs:** because both `fromAssets` and `toAssets` are arrays, an RFQ can express e.g. "I have any of these USD stablecoins; quote me any of these EUR stablecoins" — useful when responding to a TAIP-14 Payment with multiple `supportedAssets`.
 
 **Use cases:** USDC↔EURC stablecoin swaps, crypto on-ramps, crypto off-ramps, FX for cross-border payments, bridging between chains.
 
 ---
 
 ## TAIP-19: ISO 20022 Mapping
-**Status:** Draft | **Requires:** TAIP-2, TAIP-3, TAIP-4, TAIP-14, TAIP-15
+**Status:** Draft | **Requires:** TAIP-2, TAIP-3, TAIP-4, TAIP-5, TAIP-6, TAIP-13, TAIP-14, TAIP-15, TAIP-16
 
 Defines bidirectional field mappings between ISO 20022 banking messages and TAP messages, enabling interoperability with traditional payment systems.
 
@@ -532,3 +564,57 @@ Defines bidirectional field mappings between ISO 20022 banking messages and TAP 
 - ACH: `payto://ach/021000021/123456789`
 - BIC/SWIFT: `payto://bic/DEUTDEDB`
 - Sort code: `payto://sortcode/040004/01001234`
+
+---
+
+## TAIP-20: On-Chain Memo Hash
+**Status:** Draft | **Requires:** TAIP-3, TAIP-4, TAIP-14
+
+Defines a chain-agnostic method to tag settlement transactions with a deterministic memo derived from the TAP transfer ID, enabling cryptographic correlation between TAP messages and on-chain settlement.
+
+**No new message types** — TAIP-20 is a settlement-layer convention, not a TAP message.
+
+### Correlation primitive
+
+```
+tap_hash = SHA-256(UTF8(tap_transfer_id))
+```
+
+`tap_transfer_id` MUST be a stable identifier agreed by both counterparties:
+1. `Transfer.id` for a TAIP-3 Transfer
+2. `Payment.id` for a TAIP-14 Payment
+3. Settlement-thread `thid` if implementations use a thread-based business identifier
+
+`SHA-256` is FIPS 180-4 SHA-2 256-bit; output is exactly 32 bytes.
+
+### Encoding profiles
+
+**Profile A — Text memo** (Cosmos `TxBody.memo`, Stellar text memos, Tempo `TIP-20`, ARC-style payment APIs):
+```
+tap:1:<64-lowercase-hex-of-tap_hash>
+```
+- prefix `tap:1:` is REQUIRED
+- hex MUST be lowercase
+- no truncation
+
+**Profile B — Binary/hash memo** (Stellar `MEMO_HASH`, Solana memo extensions, any chain with a fixed 32-byte memo slot):
+- raw 32-byte `tap_hash` placed directly in the memo field
+- if tooling requires hex/base64 wrappers, they MUST decode losslessly to the same 32 bytes
+
+**Numeric-only reference fields** (e.g., XRPL destination tags, ISO 20022 numeric remittance refs): the 32-byte hash cannot fit. Implementations MAY use an auxiliary mapping service, but such mapping is OUT OF SCOPE for TAIP-20 and MUST be documented by the implementer.
+
+### Verification
+
+A verifier with TAP message history and on-chain tx data:
+1. Look up `tap_transfer_id` from the TAP context
+2. Compute `tap_hash = SHA-256(UTF8(tap_transfer_id))`
+3. Normalize the on-chain memo per the chain profile
+4. Compare values — if equal, the on-chain tx is cryptographically correlated to that TAP transfer
+
+### Why hash, not raw ID?
+
+- **Privacy:** avoids placing TAP business identifiers (which may correlate with PII) on a public ledger
+- **Determinism:** one rule across heterogeneous memo formats — no fragile text parsing
+- **Versioned prefix (`tap:1:`):** allows future digest upgrades without ambiguity
+
+**Use cases:** institutional reconciliation, compliance audit, dispute resolution, payment-rail integrations where SWIFT-style end-to-end IDs map onto blockchain settlement.

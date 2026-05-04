@@ -42,9 +42,9 @@ Some message types use different field names for parties:
 |---------|----------------|-----------------|
 | Transfer (TAIP-3) | `originator` | `beneficiary` |
 | Payment (TAIP-14) | `customer` | `merchant` |
-| Escrow (TAIP-17) | `originator` (depositor) | `beneficiary` (recipient on capture) |
+| Lock (TAIP-17) | `originator` (depositor) | `beneficiary` (recipient on capture) |
 | Connect (TAIP-15) | `requester` | `principal` |
-| Exchange (TAIP-18) | `requester` | — |
+| RFQ (TAIP-18) | `requester` | `provider` (optional — TAIP-6 Party of liquidity provider; omit to broadcast) |
 | UpdateParty (TAIP-6) | `partyType: "originator"` | `partyType: "beneficiary"` |
 
 ### TAIP-11: LEI Code
@@ -184,8 +184,8 @@ Role describes this agent's function in **this specific transaction** (not the a
 | `CustodialWalletProvider` | Manages wallet on behalf of a party | Transfer |
 | `NonCustodialWallet` | Self-custodied wallet (no intermediary) | Transfer |
 | `IntermediaryVASP` | Routing or correspondent VASP | Transfer |
-| `EscrowAgent` | Holds funds in escrow (exactly one required) | Escrow |
-| `ExchangeAgent` | Provides exchange quotes | Exchange |
+| `EscrowAgent` | Holds funds in escrow (exactly one required) | Lock (TAIP-17) |
+| `ExchangeAgent` | Provides exchange quotes | RFQ / Quote (TAIP-18) |
 | `PaymentProcessor` | Processes the payment | Payment |
 
 ### The `for` Field: Linking Agents to Parties
@@ -466,5 +466,5 @@ Use `AddAgents` to inject a new routing agent. All agents already in the thread 
 **`for` field is required for role clarity:**
 Without `for`, it's ambiguous which party an agent represents. Always include it for OriginatorVASP and BeneficiaryVASP agents.
 
-**Escrow requires exactly one `EscrowAgent`:**
-The Escrow message spec mandates exactly one agent in the `agents` array with `role: "EscrowAgent"`. This agent controls the escrow lifecycle.
+**Lock (TAIP-17) requires exactly one `EscrowAgent`:**
+The Lock message spec (TAIP-17, formerly named `Escrow`) mandates exactly one agent in the `agents` array with `role: "EscrowAgent"`. This agent controls the escrow lifecycle.

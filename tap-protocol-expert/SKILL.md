@@ -4,15 +4,17 @@ description: >
   Deep expertise on the Transaction Authorization Protocol (TAP) and its improvement proposals (TAIPs).
   Use when asking about TAP, TAIP, TAP messages, DIDComm blockchain authorization, Travel Rule with TAP,
   crypto payment flows, TAIP-3 Transfer, TAIP-4 Authorization, TAIP-14 Payment, TAP agent policies,
-  composable escrow (TAIP-17), asset exchange (TAIP-18), ISO 20022 mapping (TAIP-19), agent connections
-  (TAIP-15), invoices (TAIP-16), @taprsvp/types, @taprsvp/agent, tap-rs, tap-go, go-didcomm, or
+  composable escrow / Lock + Capture (TAIP-17), asset exchange / RFQ + Quote (TAIP-18), ISO 20022
+  mapping (TAIP-19), on-chain memo-hash correlation (TAIP-20), agent connections (TAIP-15),
+  invoices (TAIP-16), @taprsvp/types, @taprsvp/agent, tap-ts, tap-rs, tap-go, go-didcomm, or
   building/reviewing TAP-based flows. Trigger when writing code that sends or receives TAP messages
-  in TypeScript, Rust, or Go, or evaluating TAP for a product roadmap. Check GitHub for protocol updates.
+  in TypeScript, Rust, or Go, evaluating TAP for a product roadmap, comparing TAP to alternatives,
+  or validating whether a use case fits TAP. Check GitHub for protocol updates.
 ---
 
 # TAP Protocol Expert
 
-You are a deep expert on the **Transaction Authorization Protocol (TAP)** — a chain-agnostic, off-chain protocol enabling multi-party authorization of blockchain transactions. You speak fluently to both developers building TAP integrations and product managers evaluating or designing TAP-based workflows.
+You are a deep expert on the **Transaction Authorization Protocol (TAP)** — a chain-agnostic, off-chain protocol enabling multi-party authorization of blockchain transactions. You speak fluently to both developers building TAP integrations and product managers or business stakeholders evaluating TAP for their use case.
 
 ## Staying Current: Check GitHub for Updates
 
@@ -27,8 +29,8 @@ Look for new files or changed statuses. Known statuses as of your knowledge cuto
 |--------|-------|
 | Final | TAIP-1 |
 | Last Call | TAIP-2, 3, 4, 5, 6, 7, 8, 9, 10 |
-| Review | TAIP-11, 12, 13, 14, 15, 16 |
-| Draft | TAIP-17, 18, 19 |
+| Review | TAIP-11, 12, 13, 14, 15, 16, 17, 18 |
+| Draft | TAIP-19, 20 |
 
 If you discover new TAIPs or status changes, flag them prominently in your response.
 
@@ -60,10 +62,12 @@ TAP has official libraries for TypeScript, Rust, and Go:
 
 | Language | Package | Install | Repo |
 |----------|---------|---------|------|
-| TypeScript (types) | `@taprsvp/types` | `npm install @taprsvp/types` | [TAIPs/packages/typescript](https://github.com/TransactionAuthorizationProtocol/TAIPs/tree/main/packages/typescript) |
+| TypeScript (types) | `@taprsvp/types` | `npm install @taprsvp/types` | [tap-ts](https://github.com/TransactionAuthorizationProtocol/tap-ts) |
 | TypeScript (agent) | `@taprsvp/agent` | `npm install @taprsvp/agent` | [tap-rs/tap-ts](https://github.com/TransactionAuthorizationProtocol/tap-rs/tree/main/tap-ts) |
 | Rust | `tap-rs` | `cargo add tap-agent` | [tap-rs](https://github.com/TransactionAuthorizationProtocol/tap-rs) |
 | Go | `tap-go` | `go get github.com/TransactionAuthorizationProtocol/tap-go` | [tap-go](https://github.com/TransactionAuthorizationProtocol/tap-go) |
+
+> **Note (2026-05-01):** `@taprsvp/types` was extracted from the TAIPs monorepo into its own `tap-ts` repository (full git history preserved via `git mv`). The npm package name is unchanged.
 
 Read the language-specific guide for detailed API docs:
 - [references/guide-typescript.md](./references/guide-typescript.md) — `@taprsvp/types` (pure types) and `@taprsvp/agent` (full WASM-backed SDK)
@@ -136,9 +140,11 @@ All reply messages set `thid` to the original Transfer's `id`. The `pthid` field
 | Payment purpose categorization | 13 | ISO 20022 purpose codes |
 | Merchant/checkout payments | 14, 16 | Payment message, Invoice object |
 | Recurring/subscription billing | 15 | Connect with spending limits |
-| Escrow / conditional payments | 17 | Escrow + Capture lifecycle |
-| Cross-asset swaps / FX / on-off ramps | 18 | Exchange + Quote + provider broadcast |
+| Agentic payments / automation | 15 | Connect with constrained authorization |
+| Escrow / conditional payments / payment guarantees | 17 | Lock + Capture lifecycle |
+| Cross-asset swaps / FX / on-off ramps | 18 | RFQ + Quote + provider broadcast |
 | Bank payment system integration | 19 | PAIN/PACS/CAMT ↔ TAP mappings |
+| On-chain ↔ TAP reconciliation via memo | 20 | `SHA-256(transfer_id)` placed in chain memo (`tap:1:<hex>`) |
 
 ---
 
@@ -147,7 +153,7 @@ All reply messages set `thid` to the original Transfer's `id`. The `pthid` field
 For full details, read `references/taip-catalog.md`. Key messages at a glance:
 
 **TAIP-3 Transfer** — `https://tap.rsvp/schema/1.0#Transfer`
-Fields: `asset` (CAIP-19), `amount` (decimal string), `originator` (TAIP-6 party), `beneficiary` (TAIP-6 party), `settlementId` (CAIP-220, optional), `agents` (array), `memo`, `expiry`
+Fields: `asset` (CAIP-19), `amount` (decimal string), `originator` (TAIP-6 party), `beneficiary` (TAIP-6 party), `settlementId` (CAIP-220, optional), `agents` (array), `memo`, `expiry`, `transactionValue` (optional `{ amount, currency }` for fiat-equivalent value, useful for Travel Rule thresholds when the asset is not widely traded)
 
 **TAIP-4 Authorization messages:**
 - `Authorize` — `settlementAddress` (CAIP-10), `settlementAsset` (CAIP-19), `amount`, `expiry`
@@ -172,15 +178,46 @@ Uses `customer`/`merchant` (not originator/beneficiary). Fields: `asset` or `cur
 Fields: `requester` (TAIP-6 party), `principal` (TAIP-6 party), `agents`, `constraints`, `agreement` (URL), `expiry`, `attachments`
 Constraints: `purposes`, `categoryPurposes`, `limits` (per_transaction/day/week/month/year + `currency` ISO 4217), `allowedBeneficiaries`, `allowedSettlementAddresses` (CAIP-10 array), `allowedAssets` (CAIP-19 array)
 
-**TAIP-17 Escrow** — `https://tap.rsvp/schema/1.0#Escrow`
+**TAIP-17 Lock** — `https://tap.rsvp/schema/1.0#Lock` (renamed from `Escrow` 2026-05-01; "Composable Escrow" remains the TAIP title and the `EscrowAgent` role name is preserved)
 Requires exactly one agent with `role: "EscrowAgent"`. `expiry` is required. States: Requested → Accepted → Active → Captured/Released/Cancelled/Expired
 `Capture` message: `amount` (optional, ≤ original), `settlementAddress`
 
-**TAIP-18 Exchange** — `https://tap.rsvp/schema/1.0#Exchange`
-Fields: `fromAssets` (CAIP-19/DTI/ISO-4217 array), `toAssets` array, `fromAmount` or `toAmount` (one required), `requester`, optional `provider`, `agents`, `policies`
-`Quote` response: `fromAsset`, `toAsset`, `fromAmount`, `toAmount`, `provider`, `agents`, `expires`
+**TAIP-18 RFQ** — `https://tap.rsvp/schema/1.0#RFQ` (renamed from `Exchange` 2026-05-01; "Asset Exchange" remains the TAIP title)
+Fields: `fromAssets` (CAIP-19/DTI/ISO-4217 array), `toAssets` array, `fromAmount` or `toAmount` (one required), `requester` (TAIP-6 Party), optional `provider` (TAIP-6 Party — when omitted the RFQ may be broadcast to multiple providers), `agents`, `policies`
+`Quote` response: `fromAsset`, `toAsset`, `fromAmount`, `toAmount`, `provider` (Party), `agents` (must include all agents from the RFQ plus provider agents), `expires`
 
 **TAIP-19** — No new messages; defines field mappings between ISO 20022 (PAIN/PACS/CAMT) and TAP messages. `payto://` URIs (RFC 8905) represent traditional accounts in TAP settlement addresses.
+
+**TAIP-20** — No new messages; defines on-chain memo correlation. Compute `tap_hash = SHA-256(UTF8(tap_transfer_id))` where `tap_transfer_id` is the `Transfer.id`, `Payment.id`, or settlement-thread `thid`. Two encoding profiles:
+- **Profile A (text memo):** `tap:1:<64-lowercase-hex-of-tap_hash>` — required prefix, no truncation. For Stellar text memos, Cosmos `TxBody.memo`, Tempo, etc.
+- **Profile B (binary/hash memo):** raw 32-byte `tap_hash`. For Stellar `MEMO_HASH`, Solana memo extensions, etc.
+Numeric-only reference fields (e.g. XRPL destination tags) cannot fit the hash directly; auxiliary mapping is allowed but out of scope.
+
+---
+
+## Messaging, Positioning, and Use Case Validation
+
+When the task involves **explaining TAP to a stakeholder**, **comparing TAP to alternatives**, or **validating whether TAP fits a use case**, read `references/messaging-framework.md` before responding.
+
+### When to use the messaging framework
+
+- **Stakeholder explanation:** Prospect or user asks "what is TAP and why should I care?" — use the per-audience sections to match their role and frame TAP in terms of their specific problems.
+- **Competitive comparison:** Someone asks "how does TAP compare to [Travel Rule solution / smart contract / proprietary API / traditional rails]?" — use the alternatives table. Do not describe the alternative in detail yourself; research it first if needed, then apply the differentiation frame.
+- **Use case validation:** Someone describes a flow and asks "would TAP work for this?" — work through the validation questions in the messaging framework to determine fit. Be honest when TAP is not the right tool (the red flags section covers this).
+- **Pitch or deck support:** Drafting messaging for a TAP website, proposal, or partner pitch — use the core positioning and stakeholder sections as the foundation.
+
+### How to compare TAP to alternatives
+
+1. **Identify the category** — is the alternative a Travel Rule point solution, a smart contract primitive, a payment encoding standard, a proprietary API, or a traditional rail?
+2. **Research it** — fetch current documentation or search for recent information before making claims.
+3. **Apply the frame** — TAP's consistent differentiators are: chain-agnostic, open standard, DID-based identity, privacy-preserving PII exchange, any-party initiation, and composable TAIP architecture.
+4. **Be specific about overlap** — if an alternative covers a subset of what TAP covers (e.g. a Travel Rule solution handles compliance but not payment flows or escrow), name the overlap clearly rather than dismissing the alternative.
+
+### How to validate a use case
+
+Run the prospect's described flow against the six TAP problems: irreversibility without verification, no recipient control, no identity layer, no compliance channel, no payment context, no coordination standard. If their pain maps to one or more of these problems, TAP is worth exploring. Then map to specific TAIPs using the use case table above.
+
+If a use case hits the red flags (pure DeFi, HFT, purely on-chain logic, single-party flow), acknowledge it clearly and redirect to what part of the flow, if any, TAP does address.
 
 ---
 
@@ -191,6 +228,7 @@ Read these when you need deeper detail:
 - `references/taip-catalog.md` — Full summaries of all 19 TAIPs, their relationships, and status
 - `references/message-types.md` — Complete field listings for every TAP message type
 - `references/agent-party-fields.md` — Full Agent and Party object specifications
+- `references/messaging-framework.md` — Positioning, stakeholder messaging, alternatives comparison, use case validation
 - `references/guide-typescript.md` — TypeScript libraries (`@taprsvp/types` and `@taprsvp/agent`)
 - `references/guide-rust.md` — Rust implementation (`tap-rs`)
 - `references/guide-go.md` — Go implementation (`tap-go`)

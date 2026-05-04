@@ -8,7 +8,7 @@ Two official TypeScript packages for TAP:
 | `@taprsvp/agent` | Full WASM-backed TAP agent SDK (signing, encryption, DID resolution) | `npm install @taprsvp/agent` |
 
 **Source repos:**
-- Types: [TransactionAuthorizationProtocol/TAIPs/packages/typescript](https://github.com/TransactionAuthorizationProtocol/TAIPs/tree/main/packages/typescript)
+- Types: [TransactionAuthorizationProtocol/tap-ts](https://github.com/TransactionAuthorizationProtocol/tap-ts) (extracted from the TAIPs monorepo on 2026-05-01; full git history preserved via `git mv`. Use `git log --follow` in the new repo to trace any file back to its original commit. The npm package name `@taprsvp/types` is unchanged.)
 - Agent: [TransactionAuthorizationProtocol/tap-rs/tap-ts](https://github.com/TransactionAuthorizationProtocol/tap-rs/tree/main/tap-ts)
 
 ---
@@ -134,12 +134,19 @@ import {
   createCancelMessage,
   createSettleMessage,
   createConnectMessage,
-  createExchangeMessage,
+  createRFQMessage,    // formerly createExchangeMessage (renamed 2026-05-01)
   createQuoteMessage,
+  createLockMessage,   // formerly createEscrowMessage (renamed 2026-05-01)
+  createCaptureMessage,
   createBasicMessage,
   createDIDCommMessage,
 } from '@taprsvp/agent';
 ```
+
+> **Renames (2026-05-01):**
+> - `Escrow` / `EscrowMessage` → `Lock` / `LockMessage` (validators and arbitraries renamed accordingly)
+> - `Exchange` / `ExchangeMessage` → `RFQ` / `RFQMessage`
+> - The `EscrowAgent` role name is preserved.
 
 ### DID Resolution
 

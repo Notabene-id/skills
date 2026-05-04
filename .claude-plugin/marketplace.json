@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Notabene skills for Travel Rule compliance, TAP protocol, and blockchain standards",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "plugins": [
     {
@@ -14,27 +14,21 @@
       "description": "Notabene API integration guide for Travel Rule compliance, Flow pay-ins, and JavaScript SDK",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./notabene-api"
-      ]
+      "skills": ["./notabene-api"]
     },
     {
       "name": "tap-protocol-expert",
       "description": "Deep expertise on the Transaction Authorization Protocol (TAP) and its improvement proposals (TAIPs)",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./tap-protocol-expert"
-      ]
+      "skills": ["./tap-protocol-expert"]
     },
     {
       "name": "caip-standards-expert",
       "description": "Expert on Chain Agnostic Improvement Proposals (CAIPs) and the CASA namespace registry",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./caip-standards-expert"
-      ]
+      "skills": ["./caip-standards-expert"]
     }
   ]
 }

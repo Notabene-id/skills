@@ -111,8 +111,8 @@ All message types from TAIP-5 through TAIP-18 are implemented:
 - **`ConfirmRelationship`** (TAIP-9)
 - **`Payment`** with `Invoice` (TAIP-14/16)
 - **`Connect`** with `Constraints` (TAIP-15)
-- **`Escrow`**, **`Capture`** (TAIP-17)
-- **`Exchange`**, **`Quote`** (TAIP-18)
+- **`Lock`**, **`Capture`** (TAIP-17 — `Lock` was renamed from `Escrow` on 2026-05-01)
+- **`RFQ`**, **`Quote`** (TAIP-18 — `RFQ` was renamed from `Exchange` on 2026-05-01)
 
 ---
 
